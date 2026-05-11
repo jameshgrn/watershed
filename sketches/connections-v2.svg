@@ -1,0 +1,162 @@
+<svg viewBox="0 0 1000 640" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">watershed lab — connections v2</title>
+  <desc id="desc">Eight modules of the watershed lab arranged on two axes. Outside world enters via Connector.materialize at quarry; everything downstream is typed. Bedrock holds canonical Datasets/Schemas/Policies. Quarry produces Artifacts, flume runs Operators on them. Distributary fans Plans to flume above; tributary receives Deposits and validates them below, anchoring Baselines into bedrock. Outcrop feeds References to strata and occasionally to flume. Shared bus enumerates the lifted typed contracts.</desc>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--color-text-secondary, #6b6b6b)"/>
+    </marker>
+    <marker id="arrow-faint" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--color-text-tertiary, #9a9a9a)"/>
+    </marker>
+    <marker id="arrow-bold" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--color-text-primary, #1f1f1f)"/>
+    </marker>
+  </defs>
+
+  <style>
+    .module    { fill: var(--color-bg-secondary, #f3f1ec); stroke: var(--color-border-primary, #cfc9bf); stroke-width: 1.2; rx: 6; }
+    .static    { fill: var(--color-bg-tertiary,  #ebe7dd); stroke: var(--color-border-primary, #b8b1a3); }
+    .external  { fill: none; stroke: var(--color-text-tertiary, #9a9a9a); stroke-width: 1; stroke-dasharray: 5 4; rx: 6; }
+    .label     { font: 600 13px ui-sans-serif, system-ui, sans-serif; fill: var(--color-text-primary, #1f1f1f); }
+    .sub       { font: 400 10px ui-sans-serif, system-ui, sans-serif; fill: var(--color-text-secondary, #6b6b6b); }
+    .edge      { stroke: var(--color-text-secondary, #6b6b6b); stroke-width: 1.4; fill: none; }
+    .edge-bold { stroke: var(--color-text-primary, #1f1f1f); stroke-width: 2; fill: none; }
+    .edge-faint{ stroke: var(--color-text-tertiary, #b3b0a8); stroke-width: 1; fill: none; stroke-dasharray: 4 3; }
+    .edgeLabel { font: 500 10px ui-sans-serif, system-ui, sans-serif; fill: var(--color-text-secondary, #555); }
+    .edgeLabel-key { font: 600 10px ui-sans-serif, system-ui, sans-serif; fill: var(--color-text-primary, #1f1f1f); }
+    .axisLabel { font: 600 10px ui-sans-serif, system-ui, sans-serif; fill: var(--color-text-tertiary, #9a9a9a); letter-spacing: 0.08em; text-transform: uppercase; }
+    .bus       { fill: var(--color-bg-tertiary, #efece4); stroke: var(--color-border-primary, #cfc9bf); stroke-width: 1; rx: 4; }
+  </style>
+
+  <!-- axis labels -->
+  <text x="40" y="320" class="axisLabel">data axis →</text>
+  <text x="500" y="35" text-anchor="middle" class="axisLabel">code / agent axis</text>
+
+  <!-- outside world (untyped zone) -->
+  <rect x="20" y="270" width="100" height="56" class="external"/>
+  <text x="70" y="294" text-anchor="middle" class="label" fill="var(--color-text-tertiary, #9a9a9a)">outside</text>
+  <text x="70" y="310" text-anchor="middle" class="sub">untyped reality</text>
+
+  <!-- the boundary annotation -->
+  <text x="167" y="265" text-anchor="middle" class="edgeLabel-key">Connector.materialize</text>
+  <text x="167" y="278" text-anchor="middle" class="sub" font-style="italic">the only untyped → typed crossing</text>
+  <line x1="120" y1="298" x2="200" y2="298" class="edge-bold" marker-end="url(#arrow-bold)"/>
+
+  <!-- distributary -->
+  <rect x="420" y="60" width="180" height="56" class="module"/>
+  <text x="510" y="84" text-anchor="middle" class="label">distributary</text>
+  <text x="510" y="102" text-anchor="middle" class="sub">PlanSpec · DispatchRun · Governor</text>
+
+  <!-- bedrock -->
+  <rect x="200" y="270" width="130" height="60" class="module static"/>
+  <text x="265" y="297" text-anchor="middle" class="label">bedrock</text>
+  <text x="265" y="314" text-anchor="middle" class="sub">Dataset · Schema · Policy</text>
+
+  <!-- quarry -->
+  <rect x="360" y="270" width="130" height="60" class="module"/>
+  <text x="425" y="297" text-anchor="middle" class="label">quarry</text>
+  <text x="425" y="314" text-anchor="middle" class="sub">Connector · materialize</text>
+
+  <!-- flume -->
+  <rect x="520" y="270" width="170" height="60" class="module"/>
+  <text x="605" y="297" text-anchor="middle" class="label">flume</text>
+  <text x="605" y="314" text-anchor="middle" class="sub">Operator · OperatorRun</text>
+
+  <!-- mosaic -->
+  <rect x="730" y="210" width="130" height="56" class="module"/>
+  <text x="795" y="234" text-anchor="middle" class="label">mosaic</text>
+  <text x="795" y="251" text-anchor="middle" class="sub">Figure · Layer · Basemap</text>
+
+  <!-- strata -->
+  <rect x="730" y="335" width="130" height="56" class="module"/>
+  <text x="795" y="359" text-anchor="middle" class="label">strata</text>
+  <text x="795" y="376" text-anchor="middle" class="sub">Manuscript · Section</text>
+
+  <!-- outcrop -->
+  <rect x="880" y="210" width="105" height="56" class="module static"/>
+  <text x="932" y="234" text-anchor="middle" class="label">outcrop</text>
+  <text x="932" y="251" text-anchor="middle" class="sub">Reference</text>
+
+  <!-- tributary -->
+  <rect x="420" y="510" width="180" height="56" class="module"/>
+  <text x="510" y="534" text-anchor="middle" class="label">tributary</text>
+  <text x="510" y="551" text-anchor="middle" class="sub">Deposit · Validation · Merge · Baseline</text>
+
+  <!-- tools chip -->
+  <rect x="880" y="60" width="100" height="42" class="module"/>
+  <text x="930" y="80" text-anchor="middle" class="label">tools</text>
+  <text x="930" y="94" text-anchor="middle" class="sub">lab CLI</text>
+
+  <!-- shared bus -->
+  <rect x="60" y="600" width="920" height="32" class="bus"/>
+  <text x="520" y="619" text-anchor="middle" class="label">shared/ — typed contracts</text>
+  <text x="520" y="630" text-anchor="middle" class="sub" font-size="9">Artifact · Lineage · BackingStore · Spatial/Temporal · Operator · OperatorRun · CheckResult · DagAction · TaskState · ~40 events · etc.</text>
+
+  <!-- data axis edges -->
+  <line x1="330" y1="290" x2="360" y2="290" class="edge" marker-end="url(#arrow)"/>
+  <text x="345" y="282" text-anchor="middle" class="edgeLabel">Dataset</text>
+
+  <line x1="360" y1="310" x2="330" y2="310" class="edge" marker-end="url(#arrow)"/>
+  <text x="345" y="324" text-anchor="middle" class="edgeLabel">Artifact</text>
+
+  <line x1="490" y1="300" x2="520" y2="300" class="edge" marker-end="url(#arrow)"/>
+  <text x="505" y="293" text-anchor="middle" class="edgeLabel-key">Artifact</text>
+
+  <path d="M 690 285 Q 715 285 730 235" class="edge" marker-end="url(#arrow)"/>
+  <text x="710" y="258" class="edgeLabel">Artifact, Lineage</text>
+
+  <path d="M 690 305 Q 715 305 730 360" class="edge" marker-end="url(#arrow)"/>
+  <text x="700" y="345" class="edgeLabel">Artifact, Lineage</text>
+
+  <!-- outcrop edges -->
+  <line x1="880" y1="252" x2="860" y2="358" class="edge" marker-end="url(#arrow)"/>
+  <text x="870" y="306" class="edgeLabel">Reference</text>
+
+  <path d="M 880 222 Q 730 175 685 270" class="edge-faint" marker-end="url(#arrow-faint)"/>
+  <text x="755" y="190" class="edgeLabel" fill="var(--color-text-tertiary, #9a9a9a)">Reference (ground truth)</text>
+
+  <!-- code/agent axis edges -->
+  <line x1="510" y1="116" x2="510" y2="270" class="edge" marker-end="url(#arrow)"/>
+  <text x="518" y="200" class="edgeLabel">PlanUnit, DispatchRun</text>
+
+  <line x1="540" y1="330" x2="540" y2="510" class="edge" marker-end="url(#arrow)"/>
+  <text x="548" y="420" class="edgeLabel">CheckResult, Lineage</text>
+
+  <!-- distributary -> tributary (Deposit loop, the new typed seam) -->
+  <path d="M 420 88 Q 280 88 280 538 Q 280 538 420 538" class="edge-bold" marker-end="url(#arrow-bold)"/>
+  <text x="240" y="320" class="edgeLabel-key">Deposit</text>
+  <text x="240" y="333" class="sub" font-style="italic">(new, typed)</text>
+
+  <!-- tributary -> bedrock (anchor) -->
+  <path d="M 420 540 Q 230 540 250 330" class="edge" marker-end="url(#arrow)"/>
+  <text x="190" y="475" class="edgeLabel">Merge, Baseline</text>
+
+  <!-- tributary -> distributary (governance feedback) -->
+  <line x1="600" y1="528" x2="600" y2="116" class="edge-faint" marker-end="url(#arrow-faint)"/>
+  <text x="610" y="320" class="edgeLabel" fill="var(--color-text-tertiary, #9a9a9a)">next-run baseline</text>
+
+  <!-- shared bus connectors (light) -->
+  <line x1="265" y1="330" x2="265" y2="600" class="edge-faint"/>
+  <line x1="425" y1="330" x2="425" y2="600" class="edge-faint"/>
+  <line x1="605" y1="330" x2="605" y2="600" class="edge-faint"/>
+  <line x1="510" y1="566" x2="510" y2="600" class="edge-faint"/>
+  <line x1="795" y1="391" x2="795" y2="600" class="edge-faint"/>
+  <line x1="932" y1="266" x2="932" y2="600" class="edge-faint"/>
+
+  <!-- legend -->
+  <g transform="translate(60, 100)">
+    <rect width="14" height="14" class="module static"/>
+    <text x="22" y="11" class="sub">static (bedrock, outcrop)</text>
+    <rect x="0" y="22" width="14" height="14" class="module"/>
+    <text x="22" y="33" class="sub">dynamic (everything that flows)</text>
+    <rect x="0" y="44" width="14" height="14" class="external"/>
+    <text x="22" y="55" class="sub">external / untyped</text>
+    <line x1="0" y1="74" x2="20" y2="74" class="edge-bold"/>
+    <text x="26" y="77" class="sub">load-bearing typed seam</text>
+    <line x1="0" y1="90" x2="20" y2="90" class="edge"/>
+    <text x="26" y="93" class="sub">typed contract</text>
+    <line x1="0" y1="106" x2="20" y2="106" class="edge-faint"/>
+    <text x="26" y="109" class="sub">indirect / shared bus</text>
+  </g>
+</svg>
