@@ -5,8 +5,8 @@ use watershed_contracts::{ClaimKind, FileClaim};
 
 use watershed_distributary::dag::{
     topological_sort, DagAction, DagError, DagEvent, DagKernel, DagState, DispatchTask,
-    GovernorAction, TaskDispatched, TaskGovernorResumed, TaskMergeDone, TaskReviewDone,
-    TaskReviewOutcome, TaskState, TaskWaitDone, TaskWaitOutcome,
+    GovernorAction, TaskDispatched, TaskGovernorResumed, TaskMergeDone, TaskMergeOutcome,
+    TaskReviewDone, TaskReviewOutcome, TaskState, TaskWaitDone, TaskWaitOutcome,
 };
 
 fn dep_map<const N: usize>(spec: [(&str, &[&str]); N]) -> BTreeMap<String, Vec<String>> {
@@ -56,14 +56,14 @@ fn review_done(slug: &str, outcome: TaskReviewOutcome) -> DagEvent {
 fn merge_done(slug: &str) -> DagEvent {
     DagEvent::TaskMergeDone(TaskMergeDone {
         task_slug: slug.to_owned(),
-        error: None,
+        outcome: TaskMergeOutcome::Merged,
     })
 }
 
-fn merge_failed(slug: &str, error: &str) -> DagEvent {
+fn merge_failed(slug: &str) -> DagEvent {
     DagEvent::TaskMergeDone(TaskMergeDone {
         task_slug: slug.to_owned(),
-        error: Some(error.to_owned()),
+        outcome: TaskMergeOutcome::Failed,
     })
 }
 
@@ -378,7 +378,7 @@ fn merge_failure_cascades_to_pending_dependents_but_not_independent_active_work(
     kernel.handle(wait_done("a", "p-a", TaskWaitOutcome::Done));
     kernel.handle(review_done("a", TaskReviewOutcome::Passed));
 
-    let actions = kernel.handle(merge_failed("a", "conflict"));
+    let actions = kernel.handle(merge_failed("a"));
 
     assert_eq!(kernel.task_state("a"), Some(TaskState::Failed));
     assert_eq!(kernel.task_state("b"), Some(TaskState::Skipped));

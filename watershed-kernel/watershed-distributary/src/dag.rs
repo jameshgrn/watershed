@@ -229,7 +229,14 @@ impl std::fmt::Display for TaskReviewOutcome {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TaskMergeDone {
     pub task_slug: String,
-    pub error: Option<String>,
+    pub outcome: TaskMergeOutcome,
+}
+
+/// Merge result reported by an effect runner.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TaskMergeOutcome {
+    Merged,
+    Failed,
 }
 
 /// Governor decision after an interrupted task.
@@ -626,12 +633,15 @@ impl DagKernel {
             return Vec::new();
         }
 
-        if event.error.is_some() {
-            self.task_states
-                .insert(event.task_slug.clone(), TaskState::Failed);
-            self.cascade_failure(&event.task_slug);
-        } else {
-            self.task_states.insert(event.task_slug, TaskState::Merged);
+        match event.outcome {
+            TaskMergeOutcome::Merged => {
+                self.task_states.insert(event.task_slug, TaskState::Merged);
+            }
+            TaskMergeOutcome::Failed => {
+                self.task_states
+                    .insert(event.task_slug.clone(), TaskState::Failed);
+                self.cascade_failure(&event.task_slug);
+            }
         }
 
         let mut actions = self.try_merge();

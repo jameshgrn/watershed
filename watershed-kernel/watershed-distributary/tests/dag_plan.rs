@@ -2,8 +2,8 @@ use std::path::PathBuf;
 
 use watershed_contracts::{ClaimKind, FileClaim, Policy, RecoveredIntent};
 use watershed_distributary::dag::{
-    DagAction, DagError, DagEvent, DagPlan, DagTask, TaskDispatched, TaskMergeDone, TaskReviewDone,
-    TaskReviewOutcome, TaskWaitDone, TaskWaitOutcome,
+    DagAction, DagError, DagEvent, DagPlan, DagTask, TaskDispatched, TaskMergeDone,
+    TaskMergeOutcome, TaskReviewDone, TaskReviewOutcome, TaskWaitDone, TaskWaitOutcome,
 };
 use watershed_distributary::{collect, dispatch, mock_worker, Drafted, Plan};
 use watershed_tributary::{baseline, merge, validate, Validation};
@@ -294,7 +294,7 @@ fn dag_dispatch_feeds_existing_plan_run_settlement_ceremony() {
 
     let done_actions = kernel.handle(DagEvent::TaskMergeDone(TaskMergeDone {
         task_slug: "root".to_owned(),
-        error: None,
+        outcome: TaskMergeOutcome::Merged,
     }));
     assert!(done_actions
         .iter()

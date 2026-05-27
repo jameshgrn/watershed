@@ -156,6 +156,7 @@ pub const WAIT_DONE_REJECTS_KERNEL_TASK_STATE: &str = "wait_done_rejects_kernel_
 pub const DAG_KERNEL_BINDS_TASK_PANES: &str = "dag_kernel_binds_task_panes";
 pub const TASK_STATE_REJECTS_DEAD_VARIANTS: &str = "task_state_rejects_dead_variants";
 pub const REVIEW_DONE_REJECTS_BOOLEAN_VERDICT_BAG: &str = "review_done_rejects_boolean_verdict_bag";
+pub const MERGE_DONE_REJECTS_OPTIONAL_ERROR: &str = "merge_done_rejects_optional_error";
 
 pub fn pressure_tests() -> Vec<PressureTest> {
     vec![
@@ -263,6 +264,11 @@ pub fn pressure_tests() -> Vec<PressureTest> {
             name: REVIEW_DONE_REJECTS_BOOLEAN_VERDICT_BAG.to_owned(),
             claim: "review completion events use a typed review outcome instead of a boolean, verdict string, and commit-count bag".to_owned(),
             enforced_by: "tests/compile_fail/review_done_rejects_boolean_verdict_bag.rs".to_owned(),
+        },
+        PressureTest {
+            name: MERGE_DONE_REJECTS_OPTIONAL_ERROR.to_owned(),
+            claim: "merge completion events use a typed merge outcome instead of an optional error field".to_owned(),
+            enforced_by: "tests/compile_fail/merge_done_rejects_optional_error.rs".to_owned(),
         },
     ]
 }
