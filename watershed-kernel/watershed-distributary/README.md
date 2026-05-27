@@ -14,6 +14,7 @@ belong outside the kernel.
 The DAG kernel enforces:
 
 - dependency-gated dispatch,
+- a task state enum containing only reachable lifecycle states,
 - independent file-claim conflict rejection,
 - serial topological merge,
 - pane identity binding from dispatch through review and merge,

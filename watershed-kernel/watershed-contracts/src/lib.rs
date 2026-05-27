@@ -154,6 +154,7 @@ pub const DAG_PLAN_CLAIMS_TRAVEL_TO_MERGE: &str = "dag_plan_claims_travel_to_mer
 pub const DAG_PLAN_REJECTS_CONFLICTING_CLAIMS: &str = "dag_plan_rejects_conflicting_claims";
 pub const WAIT_DONE_REJECTS_KERNEL_TASK_STATE: &str = "wait_done_rejects_kernel_task_state";
 pub const DAG_KERNEL_BINDS_TASK_PANES: &str = "dag_kernel_binds_task_panes";
+pub const TASK_STATE_REJECTS_DEAD_VARIANTS: &str = "task_state_rejects_dead_variants";
 
 pub fn pressure_tests() -> Vec<PressureTest> {
     vec![
@@ -251,6 +252,11 @@ pub fn pressure_tests() -> Vec<PressureTest> {
             name: DAG_KERNEL_BINDS_TASK_PANES.to_owned(),
             claim: "the DAG kernel binds task pane identity at dispatch, rejects wait completion from mismatched panes, and carries the bound pane into review interrupts and merge actions".to_owned(),
             enforced_by: "watershed-distributary/tests/dag_kernel.rs".to_owned(),
+        },
+        PressureTest {
+            name: TASK_STATE_REJECTS_DEAD_VARIANTS.to_owned(),
+            claim: "the public DAG task state enum exposes only lifecycle states the kernel can actually enter".to_owned(),
+            enforced_by: "tests/compile_fail/task_state_rejects_dead_variants.rs".to_owned(),
         },
     ]
 }

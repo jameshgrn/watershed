@@ -7,15 +7,12 @@ use watershed_contracts::FileClaim;
 pub enum TaskState {
     Pending,
     Active,
-    Done,
     Failed,
     Reviewing,
     ReviewedPass,
-    ReviewedFail,
     Merging,
     Merged,
     TimedOut,
-    Closed,
     Abandoned,
     Skipped,
 }
@@ -25,15 +22,12 @@ impl TaskState {
         match self {
             TaskState::Pending => "pending",
             TaskState::Active => "active",
-            TaskState::Done => "done",
             TaskState::Failed => "failed",
             TaskState::Reviewing => "reviewing",
             TaskState::ReviewedPass => "reviewed_pass",
-            TaskState::ReviewedFail => "reviewed_fail",
             TaskState::Merging => "merging",
             TaskState::Merged => "merged",
             TaskState::TimedOut => "timed_out",
-            TaskState::Closed => "closed",
             TaskState::Abandoned => "abandoned",
             TaskState::Skipped => "skipped",
         }

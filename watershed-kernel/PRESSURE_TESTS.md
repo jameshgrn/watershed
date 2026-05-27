@@ -14,6 +14,8 @@ WorkerLifecycleSealed is enforced by `tests/compile_fail/complete_run_before_run
 
 WorkerWaitOutcomeNarrowed is enforced by `tests/compile_fail/wait_done_rejects_kernel_task_state.rs`. The rule is that worker wait completion events accept only `TaskWaitOutcome`, not internal `TaskState`; an effect runner cannot report kernel states such as `Reviewing`, `Merging`, or `Merged` as worker wait results.
 
+TaskStateRejectsDeadVariants is enforced by `tests/compile_fail/task_state_rejects_dead_variants.rs`. The rule is that the public DAG task state enum exposes only lifecycle states the kernel can actually enter; dead states like `Done`, `ReviewedFail`, and `Closed` are not constructible.
+
 ## Runtime invariants
 
 Not all pressure tests are compile-fail. Some constitutional rules are about runtime behavior (validation logic, state-transition semantics only verifiable at runtime) and are enforced by deterministic integration tests rather than trybuild fixtures. These tests register their enforcement path in `pressure_tests()` in `watershed-contracts/src/lib.rs` alongside the compile-fail tests.

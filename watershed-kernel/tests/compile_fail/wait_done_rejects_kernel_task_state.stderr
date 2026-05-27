@@ -1,5 +1,5 @@
 error[E0308]: mismatched types
  --> $WORKSPACE/tests/compile_fail/wait_done_rejects_kernel_task_state.rs
   |
-  |         outcome: TaskState::Done,
-  |                  ^^^^^^^^^^^^^^^ expected `TaskWaitOutcome`, found `TaskState`
+  |         outcome: TaskState::Merging,
+  |                  ^^^^^^^^^^^^^^^^^^ expected `TaskWaitOutcome`, found `TaskState`
