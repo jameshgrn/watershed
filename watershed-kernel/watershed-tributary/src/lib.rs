@@ -102,10 +102,10 @@ pub fn validate(deposit: Deposit, claims: &[FileClaim]) -> Validation {
     if let Some(unclaimed_path) = deposit.touched_files.iter().find(|touched_path| {
         !claims
             .iter()
-            .any(|claim| claim.path.as_path() == touched_path.as_path())
+            .any(|claim| claim.grants_write_to(touched_path.as_path()))
     }) {
         let reason = format!(
-            "deposit touched unclaimed file '{}'",
+            "deposit touched file without write authority '{}'",
             unclaimed_path.display()
         );
 

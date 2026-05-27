@@ -8,7 +8,7 @@ Legal settlement transitions:
 - `merge(AcceptedValidation) -> Merge`
 - `baseline(Merge) -> Baseline`
 
-Validation enforces two structural invariants on every Deposit-against-Plan pair: the deposit's summary is non-empty, and every path in the deposit's `touched_files` appears in the plan's `FileClaim`s. Neither check is opt-in; both are properties of the `validate` transition itself.
+Validation enforces two structural invariants on every Deposit-against-Plan pair: the deposit's summary is non-empty, and every path in the deposit's `touched_files` is covered by a write-authorizing `FileClaim`. Directory claims cover descendants, sibling paths are outside authority, and `ReadOnly` claims do not authorize touched files. Neither check is opt-in; both are properties of the `validate` transition itself.
 
 `Validation` is either `Accepted(AcceptedValidation)` or `Rejected(RejectedValidation)`.
 

@@ -1,6 +1,6 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use thiserror::Error;
 
 /// Structured intent recovered before claims or dispatch can exist.
@@ -29,6 +29,42 @@ pub enum WorkClass {
 pub struct FileClaim {
     pub path: PathBuf,
     pub kind: ClaimKind,
+}
+
+impl FileClaim {
+    /// Returns the path form used when comparing claim authority.
+    pub fn normalized_path(&self) -> String {
+        normalize_claim_path(&self.path)
+    }
+
+    /// Returns whether this claim's path authority covers `path`.
+    pub fn covers_path(&self, path: impl AsRef<Path>) -> bool {
+        path_covers(
+            &self.normalized_path(),
+            &normalize_claim_path(path.as_ref()),
+        )
+    }
+
+    /// Returns whether this claim grants write authority for `path`.
+    pub fn grants_write_to(&self, path: impl AsRef<Path>) -> bool {
+        !matches!(self.kind, ClaimKind::ReadOnly) && self.covers_path(path)
+    }
+
+    /// Returns whether this claim and `other` cannot legally run independently.
+    pub fn conflicts_with(&self, other: &FileClaim) -> bool {
+        if matches!(self.kind, ClaimKind::ReadOnly)
+            || matches!(other.kind, ClaimKind::ReadOnly)
+            || matches!(
+                (&self.kind, &other.kind),
+                (ClaimKind::Shared, ClaimKind::Shared)
+            )
+        {
+            return false;
+        }
+
+        path_covers(&self.normalized_path(), &other.normalized_path())
+            || path_covers(&other.normalized_path(), &self.normalized_path())
+    }
 }
 
 /// The kind of access a plan claims for a file.
@@ -81,6 +117,22 @@ pub struct Deposit {
 pub enum ContractError {
     #[error("invalid contract data: {reason}")]
     InvalidData { reason: String },
+}
+
+fn normalize_claim_path(path: &Path) -> String {
+    path.to_string_lossy()
+        .trim()
+        .trim_start_matches("./")
+        .trim_end_matches('/')
+        .to_owned()
+}
+
+fn path_covers(claim_path: &str, path: &str) -> bool {
+    if claim_path.is_empty() || path.is_empty() {
+        return false;
+    }
+
+    claim_path == path || path.starts_with(&format!("{claim_path}/"))
 }
 
 pub const DISPATCH_UNVALIDATED_PLAN: &str = "dispatch_unvalidated_plan";
@@ -155,8 +207,7 @@ pub fn pressure_tests() -> Vec<PressureTest> {
         },
         PressureTest {
             name: VALIDATION_REJECTS_UNCLAIMED_FILES.to_owned(),
-            claim: "validation rejects deposits that touched files outside the plan's file claims"
-                .to_owned(),
+            claim: "validation rejects deposits that touched files outside the plan's write-authorizing file claims".to_owned(),
             enforced_by: "watershed-tributary/tests/claims_integrity.rs".to_owned(),
         },
         PressureTest {
@@ -190,4 +241,52 @@ pub fn pressure_tests() -> Vec<PressureTest> {
             enforced_by: "watershed-distributary/tests/dag_plan.rs".to_owned(),
         },
     ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ClaimKind, FileClaim};
+    use std::path::PathBuf;
+
+    fn claim(path: &str, kind: ClaimKind) -> FileClaim {
+        FileClaim {
+            path: PathBuf::from(path),
+            kind,
+        }
+    }
+
+    #[test]
+    fn claim_covers_exact_path_and_descendants_only() {
+        let claim = claim("./src/", ClaimKind::Exclusive);
+
+        assert_eq!(claim.normalized_path(), "src");
+        assert!(claim.covers_path("src"));
+        assert!(claim.covers_path("src/lib.rs"));
+        assert!(!claim.covers_path("srcibling/lib.rs"));
+        assert!(!claim.covers_path("src2/lib.rs"));
+    }
+
+    #[test]
+    fn write_authority_excludes_read_only_claims() {
+        let read_only = claim("src", ClaimKind::ReadOnly);
+        let exclusive = claim("src", ClaimKind::Exclusive);
+
+        assert!(read_only.covers_path("src/lib.rs"));
+        assert!(!read_only.grants_write_to("src/lib.rs"));
+        assert!(exclusive.grants_write_to("src/lib.rs"));
+    }
+
+    #[test]
+    fn claim_conflicts_match_write_authority_overlap() {
+        let exclusive_dir = claim("src", ClaimKind::Exclusive);
+        let exclusive_file = claim("src/lib.rs", ClaimKind::Exclusive);
+        let read_only_file = claim("src/lib.rs", ClaimKind::ReadOnly);
+        let shared_a = claim("src/lib.rs", ClaimKind::Shared);
+        let shared_b = claim("./src/lib.rs", ClaimKind::Shared);
+
+        assert!(exclusive_dir.conflicts_with(&exclusive_file));
+        assert!(!exclusive_dir.conflicts_with(&read_only_file));
+        assert!(!shared_a.conflicts_with(&shared_b));
+        assert!(shared_a.conflicts_with(&exclusive_file));
+    }
 }

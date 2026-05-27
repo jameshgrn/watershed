@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 use thiserror::Error;
-use watershed_contracts::{ClaimKind, FileClaim};
+use watershed_contracts::FileClaim;
 
 /// Per-task lifecycle state for the pure DAG kernel.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -284,7 +284,7 @@ impl DagTask {
 
         if claims
             .iter()
-            .any(|claim| normalize_claim_path(&claim.path).is_empty())
+            .any(|claim| claim.normalized_path().is_empty())
         {
             return Err(DagError::EmptyClaimPath { task: slug });
         }
@@ -855,51 +855,16 @@ fn first_claim_conflict(
 ) -> Option<ClaimConflict> {
     for left_claim in left_claims {
         for right_claim in right_claims {
-            if claims_conflict(left_claim, right_claim) {
+            if left_claim.conflicts_with(right_claim) {
                 return Some(ClaimConflict {
-                    left_path: normalize_claim_path(&left_claim.path),
-                    right_path: normalize_claim_path(&right_claim.path),
+                    left_path: left_claim.normalized_path(),
+                    right_path: right_claim.normalized_path(),
                 });
             }
         }
     }
 
     None
-}
-
-fn claims_conflict(left_claim: &FileClaim, right_claim: &FileClaim) -> bool {
-    if matches!(left_claim.kind, ClaimKind::ReadOnly)
-        || matches!(right_claim.kind, ClaimKind::ReadOnly)
-        || matches!(
-            (&left_claim.kind, &right_claim.kind),
-            (ClaimKind::Shared, ClaimKind::Shared)
-        )
-    {
-        return false;
-    }
-
-    let left_path = normalize_claim_path(&left_claim.path);
-    let right_path = normalize_claim_path(&right_claim.path);
-
-    paths_overlap(&left_path, &right_path)
-}
-
-fn normalize_claim_path(path: &std::path::Path) -> String {
-    path.to_string_lossy()
-        .trim()
-        .trim_start_matches("./")
-        .trim_end_matches('/')
-        .to_owned()
-}
-
-fn paths_overlap(left_path: &str, right_path: &str) -> bool {
-    if left_path.is_empty() || right_path.is_empty() {
-        return false;
-    }
-
-    left_path == right_path
-        || left_path.starts_with(&format!("{right_path}/"))
-        || right_path.starts_with(&format!("{left_path}/"))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

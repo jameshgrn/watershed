@@ -151,6 +151,17 @@ fn dag_plan_rejects_independent_directory_claim_overlap() {
 }
 
 #[test]
+fn dag_plan_allows_independent_sibling_paths() {
+    let a = DagTask::new("a", Vec::new(), vec![file_claim("src")]).expect("task should be valid");
+    let b = DagTask::new("b", Vec::new(), vec![file_claim("src2/main.rs")])
+        .expect("task should be valid");
+
+    let plan = DagPlan::new(vec![a, b]).expect("sibling paths should not conflict");
+
+    assert_eq!(plan.tasks().len(), 2);
+}
+
+#[test]
 fn dag_plan_allows_dependent_claim_overlap() {
     let a = DagTask::new("a", Vec::new(), vec![file_claim("src/main.rs")])
         .expect("task should be valid");
