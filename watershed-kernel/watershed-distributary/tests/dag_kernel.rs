@@ -94,12 +94,36 @@ fn has_review(actions: &[DagAction], slug: &str) -> bool {
     })
 }
 
+fn review_pane<'a>(actions: &'a [DagAction], slug: &str) -> Option<&'a str> {
+    actions.iter().find_map(|action| {
+        if let DagAction::ReviewTask(review) = action {
+            if review.task_slug == slug {
+                return Some(review.pane_slug.as_str());
+            }
+        }
+
+        None
+    })
+}
+
 fn has_merge(actions: &[DagAction], slug: &str) -> bool {
     actions.iter().any(|action| {
         matches!(
             action,
             DagAction::MergeTask(merge) if merge.task_slug == slug
         )
+    })
+}
+
+fn merge_pane<'a>(actions: &'a [DagAction], slug: &str) -> Option<&'a str> {
+    actions.iter().find_map(|action| {
+        if let DagAction::MergeTask(merge) = action {
+            if merge.task_slug == slug {
+                return Some(merge.pane_slug.as_str());
+            }
+        }
+
+        None
     })
 }
 
@@ -119,6 +143,18 @@ fn has_interrupt(actions: &[DagAction], slug: &str, reason: &str) -> bool {
             DagAction::InterruptGovernor(interrupt)
                 if interrupt.task_slug == slug && interrupt.reason == reason
         )
+    })
+}
+
+fn interrupt_pane<'a>(actions: &'a [DagAction], slug: &str, reason: &str) -> Option<&'a str> {
+    actions.iter().find_map(|action| {
+        if let DagAction::InterruptGovernor(interrupt) = action {
+            if interrupt.task_slug == slug && interrupt.reason == reason {
+                return Some(interrupt.pane_slug.as_str());
+            }
+        }
+
+        None
     })
 }
 
@@ -222,14 +258,20 @@ fn single_task_happy_path_finishes_the_dag() {
     let actions = kernel.handle(dispatched("a", "p-a"));
     assert_eq!(kernel.task_state("a"), Some(TaskState::Active));
     assert!(actions.is_empty());
+    assert_eq!(
+        kernel.snapshot().task_panes.get("a").map(String::as_str),
+        Some("p-a")
+    );
 
     let actions = kernel.handle(wait_done("a", "p-a", TaskWaitOutcome::Done));
     assert_eq!(kernel.task_state("a"), Some(TaskState::Reviewing));
     assert!(has_review(&actions, "a"));
+    assert_eq!(review_pane(&actions, "a"), Some("p-a"));
 
     let actions = kernel.handle(review_done("a", true, "ok"));
     assert_eq!(kernel.task_state("a"), Some(TaskState::Merging));
     assert!(has_merge(&actions, "a"));
+    assert_eq!(merge_pane(&actions, "a"), Some("p-a"));
 
     let actions = kernel.handle(merge_done("a"));
     assert_eq!(kernel.task_state("a"), Some(TaskState::Merged));
@@ -240,6 +282,23 @@ fn single_task_happy_path_finishes_the_dag() {
     assert_eq!(done.merged, vec!["a"]);
     assert!(done.failed.is_empty());
     assert!(done.skipped.is_empty());
+}
+
+#[test]
+fn wait_done_must_match_dispatched_pane() {
+    let mut kernel = kernel([("a", &[])]);
+    kernel.start();
+    kernel.handle(dispatched("a", "p-a"));
+
+    let wrong_pane = kernel.handle(wait_done("a", "p-other", TaskWaitOutcome::Done));
+
+    assert_eq!(kernel.task_state("a"), Some(TaskState::Active));
+    assert!(wrong_pane.is_empty());
+
+    let correct_pane = kernel.handle(wait_done("a", "p-a", TaskWaitOutcome::Done));
+
+    assert_eq!(kernel.task_state("a"), Some(TaskState::Reviewing));
+    assert_eq!(review_pane(&correct_pane, "a"), Some("p-a"));
 }
 
 #[test]
@@ -266,6 +325,7 @@ fn parallel_reviews_merge_one_at_a_time_in_topological_order() {
     let second = kernel.handle(review_done("b", true, "ok"));
 
     assert!(has_merge(&first, "a"));
+    assert_eq!(merge_pane(&first, "a"), Some("p-a"));
     assert!(!has_merge(&second, "b"));
     assert_eq!(kernel.task_state("a"), Some(TaskState::Merging));
     assert_eq!(kernel.task_state("b"), Some(TaskState::ReviewedPass));
@@ -273,6 +333,7 @@ fn parallel_reviews_merge_one_at_a_time_in_topological_order() {
     let after_first_merge = kernel.handle(merge_done("a"));
 
     assert!(has_merge(&after_first_merge, "b"));
+    assert_eq!(merge_pane(&after_first_merge, "b"), Some("p-b"));
     assert_eq!(kernel.task_state("b"), Some(TaskState::Merging));
 }
 
@@ -356,6 +417,7 @@ fn governor_retry_resets_interrupted_active_task() {
 
     let interrupt = kernel.handle(wait_done("a", "p-a", TaskWaitOutcome::Failed));
     assert!(has_interrupt(&interrupt, "a", "failed"));
+    assert_eq!(interrupt_pane(&interrupt, "a", "failed"), Some("p-a"));
     assert_eq!(kernel.task_state("a"), Some(TaskState::Active));
 
     let actions = kernel.handle(governor_resumed("a", GovernorAction::Retry));
@@ -406,4 +468,8 @@ fn read_scope_violation_interrupts_without_skipping_dependents() {
     assert_eq!(kernel.task_state("a"), Some(TaskState::Failed));
     assert_eq!(kernel.task_state("b"), Some(TaskState::Pending));
     assert!(has_interrupt(&actions, "a", "read_scope_violation"));
+    assert_eq!(
+        interrupt_pane(&actions, "a", "read_scope_violation"),
+        Some("p-a")
+    );
 }

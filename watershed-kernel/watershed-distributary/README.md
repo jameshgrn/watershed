@@ -16,6 +16,7 @@ The DAG kernel enforces:
 - dependency-gated dispatch,
 - independent file-claim conflict rejection,
 - serial topological merge,
+- pane identity binding from dispatch through review and merge,
 - scan-based merge after terminal failures,
 - failure cascade to pending dependents,
 - governor retry/fail/skip decisions after interrupted work,

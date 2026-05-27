@@ -245,6 +245,7 @@ pub struct TaskGovernorResumed {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DagSnapshot {
     pub task_states: BTreeMap<String, TaskState>,
+    pub task_panes: BTreeMap<String, String>,
     pub merge_order: Vec<String>,
 }
 
@@ -396,6 +397,7 @@ pub struct DagKernel {
     deps: BTreeMap<String, Vec<String>>,
     task_files: BTreeMap<String, Vec<FileClaim>>,
     task_states: BTreeMap<String, TaskState>,
+    task_panes: BTreeMap<String, String>,
     merge_order: Vec<String>,
 }
 
@@ -419,6 +421,7 @@ impl DagKernel {
             deps,
             task_files,
             task_states,
+            task_panes: BTreeMap::new(),
             merge_order,
         })
     }
@@ -477,6 +480,7 @@ impl DagKernel {
     pub fn snapshot(&self) -> DagSnapshot {
         DagSnapshot {
             task_states: self.task_states.clone(),
+            task_panes: self.task_panes.clone(),
             merge_order: self.merge_order.clone(),
         }
     }
@@ -507,6 +511,8 @@ impl DagKernel {
             return Vec::new();
         }
 
+        self.task_panes
+            .insert(event.task_slug.clone(), event.pane_slug);
         self.task_states.insert(event.task_slug, TaskState::Active);
         Vec::new()
     }
@@ -516,13 +522,20 @@ impl DagKernel {
             return Vec::new();
         }
 
+        let Some(pane_slug) = self.task_panes.get(&event.task_slug).cloned() else {
+            return Vec::new();
+        };
+        if pane_slug != event.pane_slug {
+            return Vec::new();
+        }
+
         match event.outcome {
             TaskWaitOutcome::Done => {
                 self.task_states
                     .insert(event.task_slug.clone(), TaskState::Reviewing);
                 vec![ReviewTask {
                     task_slug: event.task_slug,
-                    pane_slug: event.pane_slug,
+                    pane_slug,
                 }
                 .into()]
             }
@@ -530,7 +543,7 @@ impl DagKernel {
             TaskWaitOutcome::TimedOut => self.on_terminal_wait(event, TaskState::TimedOut),
             TaskWaitOutcome::Failed => vec![InterruptGovernor {
                 task_slug: event.task_slug,
-                pane_slug: event.pane_slug,
+                pane_slug,
                 reason: event.outcome.to_string(),
             }
             .into()],
@@ -562,11 +575,16 @@ impl DagKernel {
         }
 
         if event.verdict == "read_scope_violation" {
+            let pane_slug = self
+                .task_panes
+                .get(&event.task_slug)
+                .cloned()
+                .expect("reviewing task has an assigned pane");
             self.task_states
                 .insert(event.task_slug.clone(), TaskState::Failed);
             return vec![InterruptGovernor {
                 task_slug: event.task_slug,
-                pane_slug: String::new(),
+                pane_slug,
                 reason: "read_scope_violation".to_owned(),
             }
             .into()];
@@ -724,10 +742,15 @@ impl DagKernel {
                 .expect("merge order only contains declared tasks");
 
             if state == TaskState::ReviewedPass {
+                let pane_slug = self
+                    .task_panes
+                    .get(slug)
+                    .cloned()
+                    .expect("reviewed task has an assigned pane");
                 self.task_states.insert(slug.clone(), TaskState::Merging);
                 return vec![MergeTask {
                     task_slug: slug.clone(),
-                    pane_slug: String::new(),
+                    pane_slug,
                     file_claims: self.task_files.get(slug).cloned().unwrap_or_default(),
                 }
                 .into()];
