@@ -1,4 +1,7 @@
 use std::collections::BTreeMap;
+use std::path::PathBuf;
+
+use watershed_contracts::{ClaimKind, FileClaim};
 
 use watershed_distributary::dag::{
     topological_sort, DagAction, DagError, DagEvent, DagKernel, DagState, DispatchTask,
@@ -15,6 +18,13 @@ fn dep_map<const N: usize>(spec: [(&str, &[&str]); N]) -> BTreeMap<String, Vec<S
             )
         })
         .collect()
+}
+
+fn file_claim(path: &str) -> FileClaim {
+    FileClaim {
+        path: PathBuf::from(path),
+        kind: ClaimKind::Exclusive,
+    }
 }
 
 fn kernel<const N: usize>(spec: [(&str, &[&str]); N]) -> DagKernel {
@@ -153,6 +163,43 @@ fn topo_sort_is_deterministic_and_detects_cycles() {
     let err = topological_sort(&dep_map([("a", &["b"]), ("b", &["a"])]))
         .expect_err("cycle should be rejected");
     assert!(matches!(err, DagError::Cycle { .. }));
+}
+
+#[test]
+fn raw_kernel_definition_rejects_empty_task_identity() {
+    let empty_task =
+        DagKernel::new(dep_map([("", &[])])).expect_err("empty task slug should be rejected");
+    assert!(matches!(empty_task, DagError::EmptyTaskSlug));
+
+    let empty_dependency = DagKernel::new(dep_map([("a", &[""])]))
+        .expect_err("empty dependency slug should be rejected");
+    assert!(matches!(
+        empty_dependency,
+        DagError::EmptyDependency { task } if task == "a"
+    ));
+}
+
+#[test]
+fn raw_kernel_task_files_reject_invalid_claim_shape() {
+    let deps = dep_map([("a", &[])]);
+
+    let missing_claims =
+        DagKernel::with_task_files(deps.clone(), BTreeMap::from([("a".to_owned(), Vec::new())]))
+            .expect_err("empty task file claim set should be rejected");
+    assert!(matches!(
+        missing_claims,
+        DagError::MissingClaims { task } if task == "a"
+    ));
+
+    let empty_path = DagKernel::with_task_files(
+        deps,
+        BTreeMap::from([("a".to_owned(), vec![file_claim(" ")])]),
+    )
+    .expect_err("empty task file claim path should be rejected");
+    assert!(matches!(
+        empty_path,
+        DagError::EmptyClaimPath { task } if task == "a"
+    ));
 }
 
 #[test]

@@ -754,7 +754,15 @@ pub fn topological_sort(deps: &BTreeMap<String, Vec<String>>) -> Result<Vec<Stri
 
 fn validate_deps(deps: &BTreeMap<String, Vec<String>>) -> Result<(), DagError> {
     for (task, task_deps) in deps {
+        if task.trim().is_empty() {
+            return Err(DagError::EmptyTaskSlug);
+        }
+
         for dependency in task_deps {
+            if dependency.trim().is_empty() {
+                return Err(DagError::EmptyDependency { task: task.clone() });
+            }
+
             if !deps.contains_key(dependency) {
                 return Err(DagError::UnknownDependency {
                     task: task.clone(),
@@ -771,9 +779,20 @@ fn validate_task_files(
     deps: &BTreeMap<String, Vec<String>>,
     task_files: &BTreeMap<String, Vec<FileClaim>>,
 ) -> Result<(), DagError> {
-    for task in task_files.keys() {
+    for (task, claims) in task_files {
         if !deps.contains_key(task) {
             return Err(DagError::UnknownTaskFiles { task: task.clone() });
+        }
+
+        if claims.is_empty() {
+            return Err(DagError::MissingClaims { task: task.clone() });
+        }
+
+        if claims
+            .iter()
+            .any(|claim| claim.normalized_path().is_empty())
+        {
+            return Err(DagError::EmptyClaimPath { task: task.clone() });
         }
     }
 
