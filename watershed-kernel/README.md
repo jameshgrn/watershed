@@ -43,18 +43,14 @@ Read [PRESSURE_TESTS.md](PRESSURE_TESTS.md) before changing compile-fail coverag
 
 Read [DESIGN_DEBT.md](DESIGN_DEBT.md) before promoting deferred contract types into the state machine.
 
+Read [STOP_LINE.md](STOP_LINE.md) before adding any new kernel type, field, transition, constructor, dependency, or public surface.
+
 The canonical full ceremony example is [watershed-distributary/tests/lawful_motion.rs](watershed-distributary/tests/lawful_motion.rs).
 
 ## Current Scope
 
-The kernel does not dispatch real workers.
-
-The kernel does not create git worktrees.
-
-The kernel does not persist a registry.
-
-The kernel does not expose a CLI.
-
-The kernel does not use UUIDs for identity.
+The kernel does not dispatch real workers, create git worktrees, manage panes,
+persist a registry, expose a CLI, provide a scheduler service, or define a
+policy language.
 
 The kernel keeps deferred contract types out of `Plan` until a transition proves them and a later transition consumes them.
