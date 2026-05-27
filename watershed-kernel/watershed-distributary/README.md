@@ -18,6 +18,7 @@ The DAG kernel enforces:
 - independent file-claim conflict rejection,
 - serial topological merge,
 - pane identity binding from dispatch through review and merge,
+- typed worker wait and review outcomes at the effect boundary,
 - scan-based merge after terminal failures,
 - failure cascade to pending dependents,
 - governor retry/fail/skip decisions after interrupted work,
@@ -25,6 +26,8 @@ The DAG kernel enforces:
 
 Worker wait completion is reported through `TaskWaitOutcome`, not `TaskState`;
 effect runners cannot report internal kernel states as worker outcomes.
+Review completion is reported through `TaskReviewOutcome`, not a loose
+boolean/verdict/count field bag.
 
 `DagTask` and `DagPlan` are the typed declaration layer immediately before
 kernel state. `DagTask::new(...)` rejects claimless work and empty claim paths, and

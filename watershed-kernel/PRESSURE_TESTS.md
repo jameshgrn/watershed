@@ -16,6 +16,8 @@ WorkerWaitOutcomeNarrowed is enforced by `tests/compile_fail/wait_done_rejects_k
 
 TaskStateRejectsDeadVariants is enforced by `tests/compile_fail/task_state_rejects_dead_variants.rs`. The rule is that the public DAG task state enum exposes only lifecycle states the kernel can actually enter; dead states like `Done`, `ReviewedFail`, and `Closed` are not constructible.
 
+ReviewDoneRejectsBooleanVerdictBag is enforced by `tests/compile_fail/review_done_rejects_boolean_verdict_bag.rs`. The rule is that review completion events use a typed `TaskReviewOutcome`, not a boolean/string/count bag that can encode contradictory states.
+
 ## Runtime invariants
 
 Not all pressure tests are compile-fail. Some constitutional rules are about runtime behavior (validation logic, state-transition semantics only verifiable at runtime) and are enforced by deterministic integration tests rather than trybuild fixtures. These tests register their enforcement path in `pressure_tests()` in `watershed-contracts/src/lib.rs` alongside the compile-fail tests.

@@ -198,9 +198,31 @@ pub struct TaskWaitDone {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TaskReviewDone {
     pub task_slug: String,
-    pub passed: bool,
-    pub verdict: String,
-    pub commit_count: u32,
+    pub outcome: TaskReviewOutcome,
+}
+
+/// Review result reported by an effect runner.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TaskReviewOutcome {
+    Passed,
+    Rejected,
+    ReadScopeViolation,
+}
+
+impl TaskReviewOutcome {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            TaskReviewOutcome::Passed => "passed",
+            TaskReviewOutcome::Rejected => "rejected",
+            TaskReviewOutcome::ReadScopeViolation => "read_scope_violation",
+        }
+    }
+}
+
+impl std::fmt::Display for TaskReviewOutcome {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
 }
 
 /// Runner event reporting merge outcome.
@@ -562,39 +584,41 @@ impl DagKernel {
             return Vec::new();
         }
 
-        if event.passed {
-            self.task_states
-                .insert(event.task_slug, TaskState::ReviewedPass);
-            return self.try_merge();
-        }
-
-        if event.verdict == "read_scope_violation" {
-            let pane_slug = self
-                .task_panes
-                .get(&event.task_slug)
-                .cloned()
-                .expect("reviewing task has an assigned pane");
-            self.task_states
-                .insert(event.task_slug.clone(), TaskState::Failed);
-            return vec![InterruptGovernor {
-                task_slug: event.task_slug,
-                pane_slug,
-                reason: "read_scope_violation".to_owned(),
+        match event.outcome {
+            TaskReviewOutcome::Passed => {
+                self.task_states
+                    .insert(event.task_slug, TaskState::ReviewedPass);
+                self.try_merge()
             }
-            .into()];
-        }
+            TaskReviewOutcome::ReadScopeViolation => {
+                let pane_slug = self
+                    .task_panes
+                    .get(&event.task_slug)
+                    .cloned()
+                    .expect("reviewing task has an assigned pane");
+                self.task_states
+                    .insert(event.task_slug.clone(), TaskState::Failed);
+                vec![InterruptGovernor {
+                    task_slug: event.task_slug,
+                    pane_slug,
+                    reason: event.outcome.to_string(),
+                }
+                .into()]
+            }
+            TaskReviewOutcome::Rejected => {
+                self.task_states
+                    .insert(event.task_slug.clone(), TaskState::Failed);
+                self.cascade_failure(&event.task_slug);
 
-        self.task_states
-            .insert(event.task_slug.clone(), TaskState::Failed);
-        self.cascade_failure(&event.task_slug);
-
-        let mut actions: Vec<DagAction> = vec![CleanupTask {
-            task_slug: event.task_slug,
+                let mut actions: Vec<DagAction> = vec![CleanupTask {
+                    task_slug: event.task_slug,
+                }
+                .into()];
+                actions.extend(self.try_merge());
+                actions.extend(self.schedule());
+                actions
+            }
         }
-        .into()];
-        actions.extend(self.try_merge());
-        actions.extend(self.schedule());
-        actions
     }
 
     fn on_merge_done(&mut self, event: TaskMergeDone) -> Vec<DagAction> {

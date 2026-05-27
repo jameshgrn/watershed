@@ -155,6 +155,7 @@ pub const DAG_PLAN_REJECTS_CONFLICTING_CLAIMS: &str = "dag_plan_rejects_conflict
 pub const WAIT_DONE_REJECTS_KERNEL_TASK_STATE: &str = "wait_done_rejects_kernel_task_state";
 pub const DAG_KERNEL_BINDS_TASK_PANES: &str = "dag_kernel_binds_task_panes";
 pub const TASK_STATE_REJECTS_DEAD_VARIANTS: &str = "task_state_rejects_dead_variants";
+pub const REVIEW_DONE_REJECTS_BOOLEAN_VERDICT_BAG: &str = "review_done_rejects_boolean_verdict_bag";
 
 pub fn pressure_tests() -> Vec<PressureTest> {
     vec![
@@ -257,6 +258,11 @@ pub fn pressure_tests() -> Vec<PressureTest> {
             name: TASK_STATE_REJECTS_DEAD_VARIANTS.to_owned(),
             claim: "the public DAG task state enum exposes only lifecycle states the kernel can actually enter".to_owned(),
             enforced_by: "tests/compile_fail/task_state_rejects_dead_variants.rs".to_owned(),
+        },
+        PressureTest {
+            name: REVIEW_DONE_REJECTS_BOOLEAN_VERDICT_BAG.to_owned(),
+            claim: "review completion events use a typed review outcome instead of a boolean, verdict string, and commit-count bag".to_owned(),
+            enforced_by: "tests/compile_fail/review_done_rejects_boolean_verdict_bag.rs".to_owned(),
         },
     ]
 }

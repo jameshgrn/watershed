@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use watershed_contracts::{ClaimKind, FileClaim, Policy, RecoveredIntent};
 use watershed_distributary::dag::{
     DagAction, DagError, DagEvent, DagPlan, DagTask, TaskDispatched, TaskMergeDone, TaskReviewDone,
-    TaskWaitDone, TaskWaitOutcome,
+    TaskReviewOutcome, TaskWaitDone, TaskWaitOutcome,
 };
 use watershed_distributary::{collect, dispatch, mock_worker, Drafted, Plan};
 use watershed_tributary::{baseline, merge, validate, Validation};
@@ -34,9 +34,7 @@ fn task(slug: &str, depends_on: Vec<String>, path: &str) -> DagTask {
 fn task_review_passed(slug: &str) -> DagEvent {
     DagEvent::TaskReviewDone(TaskReviewDone {
         task_slug: slug.to_owned(),
-        passed: true,
-        verdict: "ok".to_owned(),
-        commit_count: 1,
+        outcome: TaskReviewOutcome::Passed,
     })
 }
 
