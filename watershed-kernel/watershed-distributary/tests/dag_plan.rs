@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use watershed_contracts::{ClaimKind, FileClaim, Policy, RecoveredIntent};
 use watershed_distributary::dag::{
     DagAction, DagError, DagEvent, DagPlan, DagTask, TaskDispatched, TaskMergeDone, TaskReviewDone,
-    TaskState, TaskWaitDone,
+    TaskWaitDone, TaskWaitOutcome,
 };
 use watershed_distributary::{collect, dispatch, mock_worker, Drafted, Plan};
 use watershed_tributary::{baseline, merge, validate, Validation};
@@ -225,7 +225,7 @@ fn dag_plan_compiles_claims_into_merge_actions() {
     kernel.handle(DagEvent::TaskWaitDone(TaskWaitDone {
         task_slug: "root".to_owned(),
         pane_slug: "p-root".to_owned(),
-        task_state: TaskState::Done,
+        outcome: TaskWaitOutcome::Done,
     }));
 
     let actions = kernel.handle(task_review_passed("root"));
@@ -279,7 +279,7 @@ fn dag_dispatch_feeds_existing_plan_run_settlement_ceremony() {
     kernel.handle(DagEvent::TaskWaitDone(TaskWaitDone {
         task_slug: "root".to_owned(),
         pane_slug: "p-root".to_owned(),
-        task_state: TaskState::Done,
+        outcome: TaskWaitOutcome::Done,
     }));
     let merge_actions = kernel.handle(task_review_passed("root"));
     let merge_claims = merge_claims(&merge_actions, "root");

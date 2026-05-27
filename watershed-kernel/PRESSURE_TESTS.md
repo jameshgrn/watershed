@@ -12,6 +12,8 @@ WorkerProducesDeposit is enforced by `tests/compile_fail/construct_completed_run
 
 WorkerLifecycleSealed is enforced by `tests/compile_fail/complete_run_before_running.rs` and `tests/compile_fail/retry_completed_run.rs`. The rule is that the worker run lifecycle passes through `Pending → Running → Completed | Failed` in order: a Pending run cannot reach Completed without first becoming Running, and a Completed run cannot be retried. Only failed runs are retryable.
 
+WorkerWaitOutcomeNarrowed is enforced by `tests/compile_fail/wait_done_rejects_kernel_task_state.rs`. The rule is that worker wait completion events accept only `TaskWaitOutcome`, not internal `TaskState`; an effect runner cannot report kernel states such as `Reviewing`, `Merging`, or `Merged` as worker wait results.
+
 ## Runtime invariants
 
 Not all pressure tests are compile-fail. Some constitutional rules are about runtime behavior (validation logic, state-transition semantics only verifiable at runtime) and are enforced by deterministic integration tests rather than trybuild fixtures. These tests register their enforcement path in `pressure_tests()` in `watershed-contracts/src/lib.rs` alongside the compile-fail tests.

@@ -21,6 +21,9 @@ The DAG kernel enforces:
 - governor retry/fail/skip decisions after interrupted work,
 - and a typed action/event boundary between orchestration and effects.
 
+Worker wait completion is reported through `TaskWaitOutcome`, not `TaskState`;
+effect runners cannot report internal kernel states as worker outcomes.
+
 `DagTask` and `DagPlan` are the typed declaration layer immediately before
 kernel state. `DagTask::new(...)` rejects claimless work and empty claim paths, and
 `DagPlan::new(...)` rejects duplicate slugs, unknown dependencies, cycles, and

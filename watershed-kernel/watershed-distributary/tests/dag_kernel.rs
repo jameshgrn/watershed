@@ -6,7 +6,7 @@ use watershed_contracts::{ClaimKind, FileClaim};
 use watershed_distributary::dag::{
     topological_sort, DagAction, DagError, DagEvent, DagKernel, DagState, DispatchTask,
     GovernorAction, TaskDispatched, TaskGovernorResumed, TaskMergeDone, TaskReviewDone, TaskState,
-    TaskWaitDone,
+    TaskWaitDone, TaskWaitOutcome,
 };
 
 fn dep_map<const N: usize>(spec: [(&str, &[&str]); N]) -> BTreeMap<String, Vec<String>> {
@@ -38,11 +38,11 @@ fn dispatched(slug: &str, pane: &str) -> DagEvent {
     })
 }
 
-fn wait_done(slug: &str, pane: &str, task_state: TaskState) -> DagEvent {
+fn wait_done(slug: &str, pane: &str, outcome: TaskWaitOutcome) -> DagEvent {
     DagEvent::TaskWaitDone(TaskWaitDone {
         task_slug: slug.to_owned(),
         pane_slug: pane.to_owned(),
-        task_state,
+        outcome,
     })
 }
 
@@ -143,7 +143,7 @@ fn drive_happy(kernel: &mut DagKernel, slug: &str) -> Vec<DagAction> {
     let pane = format!("p-{slug}");
     let mut actions = Vec::new();
     actions.extend(kernel.handle(dispatched(slug, &pane)));
-    actions.extend(kernel.handle(wait_done(slug, &pane, TaskState::Done)));
+    actions.extend(kernel.handle(wait_done(slug, &pane, TaskWaitOutcome::Done)));
     actions.extend(kernel.handle(review_done(slug, true, "ok")));
     actions.extend(kernel.handle(merge_done(slug)));
     actions
@@ -223,7 +223,7 @@ fn single_task_happy_path_finishes_the_dag() {
     assert_eq!(kernel.task_state("a"), Some(TaskState::Active));
     assert!(actions.is_empty());
 
-    let actions = kernel.handle(wait_done("a", "p-a", TaskState::Done));
+    let actions = kernel.handle(wait_done("a", "p-a", TaskWaitOutcome::Done));
     assert_eq!(kernel.task_state("a"), Some(TaskState::Reviewing));
     assert!(has_review(&actions, "a"));
 
@@ -259,8 +259,8 @@ fn parallel_reviews_merge_one_at_a_time_in_topological_order() {
     kernel.start();
     kernel.handle(dispatched("a", "p-a"));
     kernel.handle(dispatched("b", "p-b"));
-    kernel.handle(wait_done("a", "p-a", TaskState::Done));
-    kernel.handle(wait_done("b", "p-b", TaskState::Done));
+    kernel.handle(wait_done("a", "p-a", TaskWaitOutcome::Done));
+    kernel.handle(wait_done("b", "p-b", TaskWaitOutcome::Done));
 
     let first = kernel.handle(review_done("a", true, "ok"));
     let second = kernel.handle(review_done("b", true, "ok"));
@@ -282,8 +282,8 @@ fn terminal_failure_does_not_block_later_mergeable_task() {
     kernel.start();
     kernel.handle(dispatched("a", "p-a"));
     kernel.handle(dispatched("b", "p-b"));
-    kernel.handle(wait_done("a", "p-a", TaskState::Done));
-    kernel.handle(wait_done("b", "p-b", TaskState::Done));
+    kernel.handle(wait_done("a", "p-a", TaskWaitOutcome::Done));
+    kernel.handle(wait_done("b", "p-b", TaskWaitOutcome::Done));
 
     let fail_actions = kernel.handle(review_done("a", false, "bad"));
     assert_eq!(kernel.task_state("a"), Some(TaskState::Failed));
@@ -301,7 +301,7 @@ fn in_progress_task_blocks_later_mergeable_task() {
     kernel.start();
     kernel.handle(dispatched("a", "p-a"));
     kernel.handle(dispatched("b", "p-b"));
-    kernel.handle(wait_done("b", "p-b", TaskState::Done));
+    kernel.handle(wait_done("b", "p-b", TaskWaitOutcome::Done));
 
     let actions = kernel.handle(review_done("b", true, "ok"));
 
@@ -316,7 +316,7 @@ fn merge_failure_cascades_to_pending_dependents_but_not_independent_active_work(
     kernel.start();
     kernel.handle(dispatched("a", "p-a"));
     kernel.handle(dispatched("c", "p-c"));
-    kernel.handle(wait_done("a", "p-a", TaskState::Done));
+    kernel.handle(wait_done("a", "p-a", TaskWaitOutcome::Done));
     kernel.handle(review_done("a", true, "ok"));
 
     let actions = kernel.handle(merge_failed("a", "conflict"));
@@ -328,12 +328,33 @@ fn merge_failure_cascades_to_pending_dependents_but_not_independent_active_work(
 }
 
 #[test]
+fn terminal_worker_wait_outcomes_cleanup_and_skip_pending_dependents() {
+    for (outcome, terminal_state) in [
+        (TaskWaitOutcome::TimedOut, TaskState::TimedOut),
+        (TaskWaitOutcome::Abandoned, TaskState::Abandoned),
+    ] {
+        let mut kernel = kernel([("a", &[]), ("b", &["a"]), ("c", &[])]);
+        kernel.start();
+        kernel.handle(dispatched("a", "p-a"));
+        kernel.handle(dispatched("c", "p-c"));
+
+        let actions = kernel.handle(wait_done("a", "p-a", outcome));
+
+        assert_eq!(kernel.task_state("a"), Some(terminal_state));
+        assert_eq!(kernel.task_state("b"), Some(TaskState::Skipped));
+        assert_eq!(kernel.task_state("c"), Some(TaskState::Active));
+        assert!(has_cleanup(&actions, "a"));
+        assert!(!has_interrupt(&actions, "a", &outcome.to_string()));
+    }
+}
+
+#[test]
 fn governor_retry_resets_interrupted_active_task() {
     let mut kernel = kernel([("a", &[])]);
     kernel.start();
     kernel.handle(dispatched("a", "p-a"));
 
-    let interrupt = kernel.handle(wait_done("a", "p-a", TaskState::Failed));
+    let interrupt = kernel.handle(wait_done("a", "p-a", TaskWaitOutcome::Failed));
     assert!(has_interrupt(&interrupt, "a", "failed"));
     assert_eq!(kernel.task_state("a"), Some(TaskState::Active));
 
@@ -361,7 +382,7 @@ fn skip_cascades_to_dependents_and_appears_in_done_summary() {
     let mut kernel = kernel([("a", &[]), ("b", &["a"])]);
     kernel.start();
     kernel.handle(dispatched("a", "p-a"));
-    kernel.handle(wait_done("a", "p-a", TaskState::Failed));
+    kernel.handle(wait_done("a", "p-a", TaskWaitOutcome::Failed));
 
     let actions = kernel.handle(governor_resumed("a", GovernorAction::Skip));
 
@@ -378,7 +399,7 @@ fn read_scope_violation_interrupts_without_skipping_dependents() {
     let mut kernel = kernel([("a", &[]), ("b", &["a"])]);
     kernel.start();
     kernel.handle(dispatched("a", "p-a"));
-    kernel.handle(wait_done("a", "p-a", TaskState::Done));
+    kernel.handle(wait_done("a", "p-a", TaskWaitOutcome::Done));
 
     let actions = kernel.handle(review_done("a", false, "read_scope_violation"));
 

@@ -57,6 +57,32 @@ impl std::fmt::Display for TaskState {
     }
 }
 
+/// Worker wait result reported by an effect runner.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TaskWaitOutcome {
+    Done,
+    Failed,
+    TimedOut,
+    Abandoned,
+}
+
+impl TaskWaitOutcome {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            TaskWaitOutcome::Done => "done",
+            TaskWaitOutcome::Failed => "failed",
+            TaskWaitOutcome::TimedOut => "timed_out",
+            TaskWaitOutcome::Abandoned => "abandoned",
+        }
+    }
+}
+
+impl std::fmt::Display for TaskWaitOutcome {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
 /// Aggregate DAG status derived from task states.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DagState {
@@ -171,7 +197,7 @@ pub struct TaskDispatched {
 pub struct TaskWaitDone {
     pub task_slug: String,
     pub pane_slug: String,
-    pub task_state: TaskState,
+    pub outcome: TaskWaitOutcome,
 }
 
 /// Runner event reporting review outcome.
@@ -490,8 +516,8 @@ impl DagKernel {
             return Vec::new();
         }
 
-        match event.task_state {
-            TaskState::Done => {
+        match event.outcome {
+            TaskWaitOutcome::Done => {
                 self.task_states
                     .insert(event.task_slug.clone(), TaskState::Reviewing);
                 vec![ReviewTask {
@@ -500,26 +526,28 @@ impl DagKernel {
                 }
                 .into()]
             }
-            TaskState::Abandoned | TaskState::TimedOut => {
-                self.task_states
-                    .insert(event.task_slug.clone(), event.task_state);
-                self.cascade_failure(&event.task_slug);
-
-                let mut actions: Vec<DagAction> = vec![CleanupTask {
-                    task_slug: event.task_slug,
-                }
-                .into()];
-                actions.extend(self.try_merge());
-                actions.extend(self.schedule());
-                actions
-            }
-            other => vec![InterruptGovernor {
+            TaskWaitOutcome::Abandoned => self.on_terminal_wait(event, TaskState::Abandoned),
+            TaskWaitOutcome::TimedOut => self.on_terminal_wait(event, TaskState::TimedOut),
+            TaskWaitOutcome::Failed => vec![InterruptGovernor {
                 task_slug: event.task_slug,
                 pane_slug: event.pane_slug,
-                reason: other.to_string(),
+                reason: event.outcome.to_string(),
             }
             .into()],
         }
+    }
+
+    fn on_terminal_wait(&mut self, event: TaskWaitDone, task_state: TaskState) -> Vec<DagAction> {
+        self.task_states.insert(event.task_slug.clone(), task_state);
+        self.cascade_failure(&event.task_slug);
+
+        let mut actions: Vec<DagAction> = vec![CleanupTask {
+            task_slug: event.task_slug,
+        }
+        .into()];
+        actions.extend(self.try_merge());
+        actions.extend(self.schedule());
+        actions
     }
 
     fn on_review_done(&mut self, event: TaskReviewDone) -> Vec<DagAction> {

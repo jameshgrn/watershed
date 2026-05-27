@@ -152,6 +152,7 @@ pub const RETRY_RESPECTS_MAX_RETRIES: &str = "retry_respects_max_retries";
 pub const DAG_KERNEL_SERIAL_MERGE_SCAN: &str = "dag_kernel_serial_merge_scan";
 pub const DAG_PLAN_CLAIMS_TRAVEL_TO_MERGE: &str = "dag_plan_claims_travel_to_merge";
 pub const DAG_PLAN_REJECTS_CONFLICTING_CLAIMS: &str = "dag_plan_rejects_conflicting_claims";
+pub const WAIT_DONE_REJECTS_KERNEL_TASK_STATE: &str = "wait_done_rejects_kernel_task_state";
 
 pub fn pressure_tests() -> Vec<PressureTest> {
     vec![
@@ -239,6 +240,11 @@ pub fn pressure_tests() -> Vec<PressureTest> {
             name: DAG_PLAN_REJECTS_CONFLICTING_CLAIMS.to_owned(),
             claim: "a typed DAG plan rejects independent tasks with overlapping write authority unless the overlapping claims are explicitly shared".to_owned(),
             enforced_by: "watershed-distributary/tests/dag_plan.rs".to_owned(),
+        },
+        PressureTest {
+            name: WAIT_DONE_REJECTS_KERNEL_TASK_STATE.to_owned(),
+            claim: "worker wait completion events accept only worker outcomes, not internal kernel task states".to_owned(),
+            enforced_by: "tests/compile_fail/wait_done_rejects_kernel_task_state.rs".to_owned(),
         },
     ]
 }
