@@ -1,0 +1,14 @@
+[package]
+name = "watershed-distributary"
+version = "0.1.0"
+edition.workspace = true
+
+[dependencies]
+serde_json.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+watershed-contracts.workspace = true
+
+[dev-dependencies]
+trybuild.workspace = true
+watershed-tributary.workspace = true

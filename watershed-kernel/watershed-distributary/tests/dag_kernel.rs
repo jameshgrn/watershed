@@ -1,0 +1,341 @@
+use std::collections::BTreeMap;
+
+use watershed_distributary::dag::{
+    topological_sort, DagAction, DagError, DagEvent, DagKernel, DagState, DispatchTask,
+    GovernorAction, TaskDispatched, TaskGovernorResumed, TaskMergeDone, TaskReviewDone, TaskState,
+    TaskWaitDone,
+};
+
+fn dep_map<const N: usize>(spec: [(&str, &[&str]); N]) -> BTreeMap<String, Vec<String>> {
+    spec.into_iter()
+        .map(|(task, deps)| {
+            (
+                task.to_owned(),
+                deps.iter().map(|dep| (*dep).to_owned()).collect(),
+            )
+        })
+        .collect()
+}
+
+fn kernel<const N: usize>(spec: [(&str, &[&str]); N]) -> DagKernel {
+    DagKernel::new(dep_map(spec)).expect("test DAG should be valid")
+}
+
+fn dispatched(slug: &str, pane: &str) -> DagEvent {
+    DagEvent::TaskDispatched(TaskDispatched {
+        task_slug: slug.to_owned(),
+        pane_slug: pane.to_owned(),
+    })
+}
+
+fn wait_done(slug: &str, pane: &str, task_state: TaskState) -> DagEvent {
+    DagEvent::TaskWaitDone(TaskWaitDone {
+        task_slug: slug.to_owned(),
+        pane_slug: pane.to_owned(),
+        task_state,
+    })
+}
+
+fn review_done(slug: &str, passed: bool, verdict: &str) -> DagEvent {
+    DagEvent::TaskReviewDone(TaskReviewDone {
+        task_slug: slug.to_owned(),
+        passed,
+        verdict: verdict.to_owned(),
+        commit_count: u32::from(passed),
+    })
+}
+
+fn merge_done(slug: &str) -> DagEvent {
+    DagEvent::TaskMergeDone(TaskMergeDone {
+        task_slug: slug.to_owned(),
+        error: None,
+    })
+}
+
+fn merge_failed(slug: &str, error: &str) -> DagEvent {
+    DagEvent::TaskMergeDone(TaskMergeDone {
+        task_slug: slug.to_owned(),
+        error: Some(error.to_owned()),
+    })
+}
+
+fn governor_resumed(slug: &str, action: GovernorAction) -> DagEvent {
+    DagEvent::TaskGovernorResumed(TaskGovernorResumed {
+        task_slug: slug.to_owned(),
+        action,
+    })
+}
+
+fn has_dispatch(actions: &[DagAction], slug: &str) -> bool {
+    actions.iter().any(|action| {
+        matches!(
+            action,
+            DagAction::DispatchTask(DispatchTask { task_slug }) if task_slug == slug
+        )
+    })
+}
+
+fn has_review(actions: &[DagAction], slug: &str) -> bool {
+    actions.iter().any(|action| {
+        matches!(
+            action,
+            DagAction::ReviewTask(review) if review.task_slug == slug
+        )
+    })
+}
+
+fn has_merge(actions: &[DagAction], slug: &str) -> bool {
+    actions.iter().any(|action| {
+        matches!(
+            action,
+            DagAction::MergeTask(merge) if merge.task_slug == slug
+        )
+    })
+}
+
+fn has_cleanup(actions: &[DagAction], slug: &str) -> bool {
+    actions.iter().any(|action| {
+        matches!(
+            action,
+            DagAction::CleanupTask(cleanup) if cleanup.task_slug == slug
+        )
+    })
+}
+
+fn has_interrupt(actions: &[DagAction], slug: &str, reason: &str) -> bool {
+    actions.iter().any(|action| {
+        matches!(
+            action,
+            DagAction::InterruptGovernor(interrupt)
+                if interrupt.task_slug == slug && interrupt.reason == reason
+        )
+    })
+}
+
+fn dag_done(actions: &[DagAction]) -> Option<&watershed_distributary::dag::DagDone> {
+    actions.iter().find_map(|action| {
+        if let DagAction::DagDone(done) = action {
+            Some(done)
+        } else {
+            None
+        }
+    })
+}
+
+fn position(order: &[String], slug: &str) -> usize {
+    order
+        .iter()
+        .position(|candidate| candidate == slug)
+        .expect("task should be present in topological order")
+}
+
+fn drive_happy(kernel: &mut DagKernel, slug: &str) -> Vec<DagAction> {
+    let pane = format!("p-{slug}");
+    let mut actions = Vec::new();
+    actions.extend(kernel.handle(dispatched(slug, &pane)));
+    actions.extend(kernel.handle(wait_done(slug, &pane, TaskState::Done)));
+    actions.extend(kernel.handle(review_done(slug, true, "ok")));
+    actions.extend(kernel.handle(merge_done(slug)));
+    actions
+}
+
+#[test]
+fn topo_sort_is_deterministic_and_detects_cycles() {
+    let deps = dep_map([("d", &["b", "c"]), ("b", &["a"]), ("c", &["a"]), ("a", &[])]);
+    let order = topological_sort(&deps).expect("diamond should sort");
+
+    assert!(position(&order, "a") < position(&order, "b"));
+    assert!(position(&order, "a") < position(&order, "c"));
+    assert!(position(&order, "b") < position(&order, "d"));
+    assert!(position(&order, "c") < position(&order, "d"));
+    assert_eq!(order, topological_sort(&deps).expect("sort should repeat"));
+
+    let err = topological_sort(&dep_map([("a", &["b"]), ("b", &["a"])]))
+        .expect_err("cycle should be rejected");
+    assert!(matches!(err, DagError::Cycle { .. }));
+}
+
+#[test]
+fn start_dispatches_only_dependency_roots() {
+    let kernel = kernel([("a", &[]), ("b", &["a"]), ("c", &[])]);
+
+    let actions = kernel.start();
+
+    assert!(has_dispatch(&actions, "a"));
+    assert!(has_dispatch(&actions, "c"));
+    assert!(!has_dispatch(&actions, "b"));
+    assert_eq!(kernel.status(), DagState::Idle);
+}
+
+#[test]
+fn single_task_happy_path_finishes_the_dag() {
+    let mut kernel = kernel([("a", &[])]);
+    kernel.start();
+
+    let actions = kernel.handle(dispatched("a", "p-a"));
+    assert_eq!(kernel.task_state("a"), Some(TaskState::Active));
+    assert!(actions.is_empty());
+
+    let actions = kernel.handle(wait_done("a", "p-a", TaskState::Done));
+    assert_eq!(kernel.task_state("a"), Some(TaskState::Reviewing));
+    assert!(has_review(&actions, "a"));
+
+    let actions = kernel.handle(review_done("a", true, "ok"));
+    assert_eq!(kernel.task_state("a"), Some(TaskState::Merging));
+    assert!(has_merge(&actions, "a"));
+
+    let actions = kernel.handle(merge_done("a"));
+    assert_eq!(kernel.task_state("a"), Some(TaskState::Merged));
+    assert!(kernel.done());
+    assert_eq!(kernel.status(), DagState::Completed);
+
+    let done = dag_done(&actions).expect("done action should be emitted");
+    assert_eq!(done.merged, vec!["a"]);
+    assert!(done.failed.is_empty());
+    assert!(done.skipped.is_empty());
+}
+
+#[test]
+fn merged_dependency_unblocks_downstream_dispatch() {
+    let mut kernel = kernel([("a", &[]), ("b", &["a"]), ("c", &["b"])]);
+    kernel.start();
+
+    let actions = drive_happy(&mut kernel, "a");
+
+    assert!(has_dispatch(&actions, "b"));
+    assert!(!has_dispatch(&actions, "c"));
+}
+
+#[test]
+fn parallel_reviews_merge_one_at_a_time_in_topological_order() {
+    let mut kernel = kernel([("a", &[]), ("b", &[])]);
+    kernel.start();
+    kernel.handle(dispatched("a", "p-a"));
+    kernel.handle(dispatched("b", "p-b"));
+    kernel.handle(wait_done("a", "p-a", TaskState::Done));
+    kernel.handle(wait_done("b", "p-b", TaskState::Done));
+
+    let first = kernel.handle(review_done("a", true, "ok"));
+    let second = kernel.handle(review_done("b", true, "ok"));
+
+    assert!(has_merge(&first, "a"));
+    assert!(!has_merge(&second, "b"));
+    assert_eq!(kernel.task_state("a"), Some(TaskState::Merging));
+    assert_eq!(kernel.task_state("b"), Some(TaskState::ReviewedPass));
+
+    let after_first_merge = kernel.handle(merge_done("a"));
+
+    assert!(has_merge(&after_first_merge, "b"));
+    assert_eq!(kernel.task_state("b"), Some(TaskState::Merging));
+}
+
+#[test]
+fn terminal_failure_does_not_block_later_mergeable_task() {
+    let mut kernel = kernel([("a", &[]), ("b", &[])]);
+    kernel.start();
+    kernel.handle(dispatched("a", "p-a"));
+    kernel.handle(dispatched("b", "p-b"));
+    kernel.handle(wait_done("a", "p-a", TaskState::Done));
+    kernel.handle(wait_done("b", "p-b", TaskState::Done));
+
+    let fail_actions = kernel.handle(review_done("a", false, "bad"));
+    assert_eq!(kernel.task_state("a"), Some(TaskState::Failed));
+    assert!(has_cleanup(&fail_actions, "a"));
+
+    let pass_actions = kernel.handle(review_done("b", true, "ok"));
+
+    assert_eq!(kernel.task_state("b"), Some(TaskState::Merging));
+    assert!(has_merge(&pass_actions, "b"));
+}
+
+#[test]
+fn in_progress_task_blocks_later_mergeable_task() {
+    let mut kernel = kernel([("a", &[]), ("b", &[])]);
+    kernel.start();
+    kernel.handle(dispatched("a", "p-a"));
+    kernel.handle(dispatched("b", "p-b"));
+    kernel.handle(wait_done("b", "p-b", TaskState::Done));
+
+    let actions = kernel.handle(review_done("b", true, "ok"));
+
+    assert_eq!(kernel.task_state("a"), Some(TaskState::Active));
+    assert_eq!(kernel.task_state("b"), Some(TaskState::ReviewedPass));
+    assert!(!has_merge(&actions, "b"));
+}
+
+#[test]
+fn merge_failure_cascades_to_pending_dependents_but_not_independent_active_work() {
+    let mut kernel = kernel([("a", &[]), ("b", &["a"]), ("c", &[])]);
+    kernel.start();
+    kernel.handle(dispatched("a", "p-a"));
+    kernel.handle(dispatched("c", "p-c"));
+    kernel.handle(wait_done("a", "p-a", TaskState::Done));
+    kernel.handle(review_done("a", true, "ok"));
+
+    let actions = kernel.handle(merge_failed("a", "conflict"));
+
+    assert_eq!(kernel.task_state("a"), Some(TaskState::Failed));
+    assert_eq!(kernel.task_state("b"), Some(TaskState::Skipped));
+    assert_eq!(kernel.task_state("c"), Some(TaskState::Active));
+    assert!(!has_cleanup(&actions, "a"));
+}
+
+#[test]
+fn governor_retry_resets_interrupted_active_task() {
+    let mut kernel = kernel([("a", &[])]);
+    kernel.start();
+    kernel.handle(dispatched("a", "p-a"));
+
+    let interrupt = kernel.handle(wait_done("a", "p-a", TaskState::Failed));
+    assert!(has_interrupt(&interrupt, "a", "failed"));
+    assert_eq!(kernel.task_state("a"), Some(TaskState::Active));
+
+    let actions = kernel.handle(governor_resumed("a", GovernorAction::Retry));
+
+    assert_eq!(kernel.task_state("a"), Some(TaskState::Pending));
+    assert!(has_dispatch(&actions, "a"));
+}
+
+#[test]
+fn governor_resume_cannot_unmerge_task() {
+    let mut kernel = kernel([("a", &[])]);
+    kernel.start();
+    drive_happy(&mut kernel, "a");
+
+    let actions = kernel.handle(governor_resumed("a", GovernorAction::Retry));
+
+    assert_eq!(kernel.task_state("a"), Some(TaskState::Merged));
+    assert!(actions.is_empty());
+    assert!(!has_dispatch(&actions, "a"));
+}
+
+#[test]
+fn skip_cascades_to_dependents_and_appears_in_done_summary() {
+    let mut kernel = kernel([("a", &[]), ("b", &["a"])]);
+    kernel.start();
+    kernel.handle(dispatched("a", "p-a"));
+    kernel.handle(wait_done("a", "p-a", TaskState::Failed));
+
+    let actions = kernel.handle(governor_resumed("a", GovernorAction::Skip));
+
+    assert_eq!(kernel.task_state("a"), Some(TaskState::Skipped));
+    assert_eq!(kernel.task_state("b"), Some(TaskState::Skipped));
+    assert!(kernel.done());
+
+    let done = dag_done(&actions).expect("skip should finish the DAG");
+    assert_eq!(done.skipped, vec!["a", "b"]);
+}
+
+#[test]
+fn read_scope_violation_interrupts_without_skipping_dependents() {
+    let mut kernel = kernel([("a", &[]), ("b", &["a"])]);
+    kernel.start();
+    kernel.handle(dispatched("a", "p-a"));
+    kernel.handle(wait_done("a", "p-a", TaskState::Done));
+
+    let actions = kernel.handle(review_done("a", false, "read_scope_violation"));
+
+    assert_eq!(kernel.task_state("a"), Some(TaskState::Failed));
+    assert_eq!(kernel.task_state("b"), Some(TaskState::Pending));
+    assert!(has_interrupt(&actions, "a", "read_scope_violation"));
+}

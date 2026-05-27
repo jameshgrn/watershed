@@ -11,4 +11,5 @@ __pycache__/
 venv/
 dist/
 build/
+target/
 *.egg-info/

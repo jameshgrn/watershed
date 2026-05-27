@@ -1,0 +1,9 @@
+error[E0451]: fields `id` and `merge` of struct `Baseline` are private
+ --> $WORKSPACE/tests/compile_fail/construct_baseline_from_distributary.rs
+  |
+  |     let _baseline = Baseline {
+  |                     -------- in this type
+  |         id: "baseline-merge-run-1".to_owned(),
+  |         ^^ private field
+  |         merge,
+  |         ^^^^^ private field

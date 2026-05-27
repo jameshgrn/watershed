@@ -1,0 +1,16 @@
+{
+  "$comment": "WorkClass schema content sha256 dc3486641e49aa98d74315403ccaeb230c39e5a0601fc95312e91da34f347a72",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Discrete category for the work a plan represents.",
+  "enum": [
+    "Feature",
+    "Fix",
+    "Refactor",
+    "Investigation",
+    "Documentation",
+    "Test",
+    "Chore"
+  ],
+  "title": "WorkClass",
+  "type": "string"
+}

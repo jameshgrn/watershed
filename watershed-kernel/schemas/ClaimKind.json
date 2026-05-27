@@ -1,0 +1,12 @@
+{
+  "$comment": "ClaimKind schema content sha256 64ae71f8c6ca62de937d83be06d5a1ccb79ba89e2defe6395805da1f6296362a",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "The kind of access a plan claims for a file.",
+  "enum": [
+    "ReadOnly",
+    "Exclusive",
+    "Shared"
+  ],
+  "title": "ClaimKind",
+  "type": "string"
+}

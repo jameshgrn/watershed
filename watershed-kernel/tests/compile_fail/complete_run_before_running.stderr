@@ -1,0 +1,8 @@
+error[E0599]: no method named `complete` found for struct `Run<watershed_distributary::Pending>` in the current scope
+ --> $WORKSPACE/tests/compile_fail/complete_run_before_running.rs
+  |
+  |     let _completed = pending.complete(
+  |                      --------^^^^^^^^ method not found in `Run<watershed_distributary::Pending>`
+  |
+  = note: the method was found for
+          - `Run<watershed_distributary::Running>`

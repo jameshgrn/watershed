@@ -1,0 +1,30 @@
+{
+  "$comment": "FileClaim schema content sha256 c991916e2d476a7541ab933ad060fbc85248ecb19f798b32421b138697463373",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "ClaimKind": {
+      "description": "The kind of access a plan claims for a file.",
+      "enum": [
+        "ReadOnly",
+        "Exclusive",
+        "Shared"
+      ],
+      "type": "string"
+    }
+  },
+  "description": "A claimed file path and the authority requested over it.",
+  "properties": {
+    "kind": {
+      "$ref": "#/definitions/ClaimKind"
+    },
+    "path": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "kind",
+    "path"
+  ],
+  "title": "FileClaim",
+  "type": "object"
+}

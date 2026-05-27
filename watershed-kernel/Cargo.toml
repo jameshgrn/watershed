@@ -1,0 +1,22 @@
+[workspace]
+members = [
+  "watershed-contracts",
+  "watershed-distributary",
+  "watershed-tributary",
+  "xtask",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+
+[workspace.dependencies]
+schemars = { version = "0.8", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+thiserror = "1"
+trybuild = "1"
+watershed-contracts = { path = "watershed-contracts" }
+watershed-distributary = { path = "watershed-distributary" }
+watershed-tributary = { path = "watershed-tributary" }

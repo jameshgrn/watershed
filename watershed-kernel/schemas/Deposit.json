@@ -1,0 +1,26 @@
+{
+  "$comment": "Deposit schema content sha256 97bfa14f62bf20163db768e380774bd5356f34038f508700fc7ea0576454ceb2",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Typed output collected from a completed run.",
+  "properties": {
+    "run_id": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "touched_files": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "run_id",
+    "summary",
+    "touched_files"
+  ],
+  "title": "Deposit",
+  "type": "object"
+}

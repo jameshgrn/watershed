@@ -1,0 +1,13 @@
+error[E0308]: mismatched types
+ --> $WORKSPACE/tests/compile_fail/merge_rejected_validation.rs
+  |
+  |         let _merge = merge(rejected);
+  |                      ----- ^^^^^^^^ expected `AcceptedValidation`, found `RejectedValidation`
+  |                      |
+  |                      arguments to this function are incorrect
+  |
+note: function defined here
+ --> $WORKSPACE/watershed-tributary/src/lib.rs
+  |
+  | pub fn merge(accepted: AcceptedValidation) -> Merge {
+  |        ^^^^^
