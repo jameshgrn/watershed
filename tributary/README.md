@@ -1,24 +1,52 @@
 # tributary/
 
-**Agent ingest, validation, merge.** Where work fans back in.
+**Agent ingest.** Where completed work first flows back in.
 
 ## Provenance
 
-Half of `dgov/` — the fan-in half. Ingest, validate, merge, baseline (sentrux).
+Half of `dgov/` - the fan-in half. v0 keeps typed fan-in records in memory.
 
-## What it owns
+## What v0 Owns
 
-- **Ingest** — receive typed agent outputs from distributary's worktrees
-- **Validation** — check that outputs satisfy the typed contracts
-- **Merge** — bring valid outputs back into the main trunk
-- **Baseline** — sentrux-backed reproducibility snapshot at merge points
+- **Deposit records** - typed proposed changes from terminal dispatch runs
+- **File changes** - content-addressed file-change sets supplied as data
+- **Claim names** - non-empty typed-contract strings, pending a shared registry
+- **Validation records** - integrity verdicts over submitted Deposits
+- **Merge records** - successful supplied integration evidence over validated Deposits
 
-## Public types it exposes (planned)
+## Public Types (v0)
 
-- `Deposit` — a typed proposed change emitted by an agent
-- `Validation` — pass/fail report against the contract a Deposit claims to satisfy
-- `Merge` — a record of a successful integration of a Deposit back to main
-- `Baseline` — a sentrux snapshot anchoring a known-good state
+| Type | Module | Purpose |
+|---|---|---|
+| `Deposit` | `deposit` | Submitted proposed change keyed by `from_dispatch_run_id` |
+| `DepositState` | `deposit` | `submitted` / `validated` / `merged` / `rejected` / `superseded` |
+| `CreatedFileChange` | `deposit` | Created file with after-content hash |
+| `ModifiedFileChange` | `deposit` | Modified file with before/after content hashes |
+| `DeletedFileChange` | `deposit` | Deleted file with before-content hash |
+| `FileChangeSet` | `deposit` | Canonical content-addressed set of file changes |
+| `derive_deposit_id` | `deposit` | Content-derived stable id with `deposit:` tag |
+| `submit_deposit_from_dispatch_run` | `deposit` | Builds a submitted Deposit from a done dispatch record |
+| `Validation` | `validation` | Frozen verdict over a submitted Deposit |
+| `ValidationVerdict` | `validation` | `pass` / `fail` / `needs_human` |
+| `ValidationCheck` | `validation` | Evidence for one validation check |
+| `SchemaPin` | `validation` | Dataset schema version pin consulted by validation |
+| `derive_validation_id` | `validation` | Content-derived stable id with `validation:` tag |
+| `validate_deposit_integrity` | `validation` | Supplied-data integrity validator for submitted Deposits |
+| `authorized_deposit_state` | `validation` | Pure mapping from verdict to authorized Deposit state |
+| `apply_validation_to_deposit` | `validation` | Pure in-memory Validation application |
+| `Merge` | `merge` | Successful integration record citing Deposit and Validation |
+| `derive_merge_id` | `merge` | Content-derived stable id with `merge:` tag |
+| `record_merge` | `merge` | Builds a Merge from a validated Deposit and pass Validation |
+| `apply_merge_to_deposit` | `merge` | Pure in-memory Merge application |
+
+## Design Constraints
+
+- **No dgov imports** - clean watershed package; no dependency on `dgov`.
+- **No distributary runtime import** - submit from a protocol-shaped dispatch record.
+- **No worktree discovery** - file changes are supplied data, not git diff output.
+- **No real merge execution** - merge records consume supplied commit evidence; no git operations.
+- **No baseline** - Merge does not run sentrux or capture Baseline records.
+- **No registry or persistence** - validation consumes supplied data and emits records only.
 
 ## Why "tributary"
 
@@ -36,4 +64,4 @@ Different invariants on each side. Distributary is concerned with *creating vali
 
 ## Status
 
-Placeholder. Awaiting migration from `~/projects/dgov/` (fan-in half of the split).
+v0 Deposit, Validation, and Merge records implemented.
