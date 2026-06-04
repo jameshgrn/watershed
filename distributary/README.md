@@ -22,7 +22,7 @@ Half of `dgov/` — the fan-out half. v0 keeps only outbound records in memory.
 | `PlanUnitFiles` | `plan` | Exact file scope: create / edit / delete / read / touch |
 | `PlanIssue` | `plan` | Validation issue (error or warning) |
 | `PlanValidationError` | `plan` | Raised when structural validation fails |
-| `validate_plan` | `plan` | Structural validation: slugs, file-claim conflicts |
+| `validate_plan` | `plan` | Structural validation: slugs, dependencies, file-claim conflicts |
 | `FileClaim` | `claims` | Kernel-shaped `{path, kind}` mirror |
 | `ClaimKind` | `claims` | `ReadOnly` / `Exclusive` / `Shared` |
 | `adapt_plan_unit_files_to_claims` | `claims` | Adapter: `PlanUnitFiles → tuple[FileClaim, ...]` |
@@ -36,6 +36,8 @@ Half of `dgov/` — the fan-out half. v0 keeps only outbound records in memory.
 
 - **No dgov imports** — clean watershed package; no dependency on `dgov`.
 - **Frozen dataclasses + `__slots__`** — immutable by default; `ValueError` for illegal states.
+- **Transition-only runs** — `DispatchRun` starts pending and advances through lifecycle methods.
+- **Derived IDs only** — callers cannot override `DispatchRun.id`.
 - **Kernel contract alignment** — `FileClaim` and `ClaimKind` match the Rust schema in `watershed-kernel/schemas/`.
 - **v0 omissions** — no `run_source`, no TOML parsing, no `Plan.id` hashing (flagged for follow-up).
 

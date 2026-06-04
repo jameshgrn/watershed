@@ -82,6 +82,31 @@ def test_init_rejects_invalid_state() -> None:
         _dispatch_run(state="reviewing")
 
 
+def test_init_rejects_direct_active_state() -> None:
+    with pytest.raises(ValueError, match="transition methods"):
+        _dispatch_run(state="active")
+
+
+def test_init_rejects_direct_terminal_state() -> None:
+    with pytest.raises(ValueError, match="transition methods"):
+        _dispatch_run(
+            state="done",
+            exit_code=0,
+            output_dir="/tmp/out",
+            terminated_at=_dt(1),
+        )
+
+
+def test_init_rejects_explicit_id_override() -> None:
+    with pytest.raises(TypeError, match="_id"):
+        _dispatch_run(_id="disprun:forged")
+
+
+def test_pending_rejects_terminal_payload() -> None:
+    with pytest.raises(ValueError, match="pending"):
+        _dispatch_run(exit_code=0)
+
+
 def test_start_active_returns_new_instance_with_same_id() -> None:
     run = _dispatch_run()
     active = run.start_active()
@@ -181,11 +206,18 @@ def test_state_transitions_preserve_input_fields() -> None:
 
 def test_clone_preserves_id_and_unchanged_fields() -> None:
     run = _dispatch_run()
-    cloned = run._clone(last_error="changed")
+    cloned = run._clone(state="active")
 
     assert cloned.id == run.id
     assert cloned.branch == run.branch
-    assert cloned.last_error == "changed"
+    assert cloned.state == "active"
+
+
+def test_clone_rejects_input_field_changes() -> None:
+    run = _dispatch_run()
+
+    with pytest.raises(ValueError, match="input fields are frozen"):
+        run._clone(branch="changed")
 
 
 def test_rejects_non_utc_timezone() -> None:

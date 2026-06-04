@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import hashlib
-from dataclasses import InitVar, dataclass, field
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Literal, TypeAlias
 
 from tributary._compat import _canonical_json, _require_utc
-from tributary.deposit import Deposit, DepositState
+from tributary.deposit import _TRANSITION_TOKEN, Deposit, DepositState
 
 ValidationVerdict: TypeAlias = Literal["pass", "fail", "needs_human"]
 
@@ -67,9 +67,8 @@ class Validation:
     reason: str
     validated_at: datetime
     signed_by: str
-    _id: InitVar[str | None] = None
 
-    def __post_init__(self, _id: str | None) -> None:
+    def __post_init__(self) -> None:
         _validate_deposit_id(self.deposit_id)
         _require_clean_string(self.validator_set_hash, "validator_set_hash")
         _require_clean_string(self.reason, "reason")
@@ -81,7 +80,7 @@ class Validation:
         _validate_verdict_matches_checks(self.verdict, checks)
         object.__setattr__(self, "schema_pins", schema_pins)
         object.__setattr__(self, "checks", checks)
-        object.__setattr__(self, "id", _validation_id_from_instance(self, _id))
+        object.__setattr__(self, "id", _validation_id_from_instance(self))
 
 
 def validate_deposit_integrity(
@@ -142,7 +141,7 @@ def apply_validation_to_deposit(deposit: Deposit, validation: Validation) -> Dep
         submitted_at=deposit.submitted_at,
         state=target_state,
         supersedes=deposit.supersedes,
-        _id=deposit.id,
+        _transition_token=_TRANSITION_TOKEN,
     )
 
 
@@ -175,10 +174,7 @@ def derive_validation_id(
     return f"validation:{digest}"
 
 
-def _validation_id_from_instance(validation: Validation, explicit_id: str | None) -> str:
-    if explicit_id is not None:
-        _validate_validation_id(explicit_id, "_id")
-        return explicit_id
+def _validation_id_from_instance(validation: Validation) -> str:
     return derive_validation_id(
         deposit_id=validation.deposit_id,
         validator_set_hash=validation.validator_set_hash,
@@ -281,11 +277,6 @@ def _validate_verdict(value: ValidationVerdict) -> None:
 def _validate_deposit_id(value: str) -> None:
     if not value.startswith("deposit:"):
         raise ValueError("deposit_id must reference a Deposit id with 'deposit:' prefix")
-
-
-def _validate_validation_id(value: str, field_name: str) -> None:
-    if not value.startswith("validation:"):
-        raise ValueError(f"{field_name} must reference a Validation id with 'validation:' prefix")
 
 
 def _require_clean_string(value: str, field_name: str) -> None:

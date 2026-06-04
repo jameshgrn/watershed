@@ -27,6 +27,26 @@ _DISPATCH_RUN_STATES = frozenset(
 )
 
 
+class _TransitionToken:
+    pass
+
+
+_TRANSITION_TOKEN = _TransitionToken()
+
+_TRANSITION_FIELDS = frozenset(
+    {
+        "state",
+        "exit_code",
+        "last_error",
+        "output_dir",
+        "prompt_tokens",
+        "completion_tokens",
+        "iteration_count",
+        "terminated_at",
+    }
+)
+
+
 def _validate_dispatch_lineage(
     *,
     retried_from: str | None,
@@ -59,6 +79,68 @@ def _validate_dispatch_timestamps(
     _require_utc(dispatched_at, "dispatched_at")
     if terminated_at is not None:
         _require_utc(terminated_at, "terminated_at")
+
+
+def _validate_dispatch_counts(
+    *,
+    prompt_tokens: int,
+    completion_tokens: int,
+    iteration_count: int,
+) -> None:
+    if prompt_tokens < 0:
+        raise ValueError("prompt_tokens must be >= 0")
+    if completion_tokens < 0:
+        raise ValueError("completion_tokens must be >= 0")
+    if iteration_count < 0:
+        raise ValueError("iteration_count must be >= 0")
+
+
+def _validate_dispatch_payload(
+    *,
+    state: DispatchRunState,
+    exit_code: int | None,
+    last_error: str,
+    output_dir: str,
+    prompt_tokens: int,
+    completion_tokens: int,
+    iteration_count: int,
+    terminated_at: datetime | None,
+) -> None:
+    _validate_dispatch_counts(
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+        iteration_count=iteration_count,
+    )
+    if state in {"pending", "active"}:
+        if exit_code is not None:
+            raise ValueError(f"{state} DispatchRuns must not have exit_code")
+        if last_error:
+            raise ValueError(f"{state} DispatchRuns must not have last_error")
+        if output_dir:
+            raise ValueError(f"{state} DispatchRuns must not have output_dir")
+        if prompt_tokens != 0 or completion_tokens != 0 or iteration_count != 0:
+            raise ValueError(f"{state} DispatchRuns must not have terminal counts")
+        if terminated_at is not None:
+            raise ValueError(f"{state} DispatchRuns must not have terminated_at")
+        return
+    if terminated_at is None:
+        raise ValueError(f"{state} DispatchRuns must have terminated_at")
+    if state == "done":
+        if exit_code != 0:
+            raise ValueError("done DispatchRuns must have exit_code == 0")
+        if last_error:
+            raise ValueError("done DispatchRuns must not have last_error")
+        return
+    if state == "failed":
+        if exit_code is None or exit_code == 0:
+            raise ValueError("failed DispatchRuns must have non-zero exit_code")
+        if not last_error:
+            raise ValueError("failed DispatchRuns must have last_error")
+        return
+    if exit_code is not None:
+        raise ValueError(f"{state} DispatchRuns must not have exit_code")
+    if not last_error:
+        raise ValueError(f"{state} DispatchRuns must have last_error")
 
 
 def derive_dispatch_run_id(
@@ -96,9 +178,7 @@ def derive_dispatch_run_id(
     return f"disprun:{digest}"
 
 
-def _dispatch_run_id_from_instance(run: DispatchRun, explicit_id: str | None) -> str:
-    if explicit_id is not None:
-        return explicit_id
+def _dispatch_run_id_from_instance(run: DispatchRun) -> str:
     return derive_dispatch_run_id(
         from_plan_id=run.from_plan_id,
         unit_slug=run.unit_slug,
@@ -143,9 +223,9 @@ class DispatchRun:
     completion_tokens: int = 0
     iteration_count: int = 0
     terminated_at: datetime | None = None
-    _id: InitVar[str | None] = None
+    _transition_token: InitVar[_TransitionToken | None] = None
 
-    def __post_init__(self, _id: str | None) -> None:
+    def __post_init__(self, _transition_token: _TransitionToken | None) -> None:
         _validate_dispatch_lineage(
             retried_from=self.retried_from,
             forked_from=self.forked_from,
@@ -157,16 +237,31 @@ class DispatchRun:
             dispatched_at=self.dispatched_at,
             terminated_at=self.terminated_at,
         )
+        if _transition_token is not _TRANSITION_TOKEN and self.state != "pending":
+            raise ValueError("DispatchRun state transitions must use transition methods")
+        _validate_dispatch_payload(
+            state=self.state,
+            exit_code=self.exit_code,
+            last_error=self.last_error,
+            output_dir=self.output_dir,
+            prompt_tokens=self.prompt_tokens,
+            completion_tokens=self.completion_tokens,
+            iteration_count=self.iteration_count,
+            terminated_at=self.terminated_at,
+        )
         object.__setattr__(self, "drift_evidence", tuple(self.drift_evidence))
-        object.__setattr__(self, "id", _dispatch_run_id_from_instance(self, _id))
+        object.__setattr__(self, "id", _dispatch_run_id_from_instance(self))
 
     def _clone(self, **changes: object) -> DispatchRun:
         """Produce a new frozen instance with changes applied, preserving id."""
+        illegal_fields = set(changes) - _TRANSITION_FIELDS
+        if illegal_fields:
+            illegal = ", ".join(sorted(illegal_fields))
+            raise ValueError(f"DispatchRun input fields are frozen: {illegal}")
         values = {f.name: getattr(self, f.name) for f in fields(self)}
         values.update(changes)
-        values["_id"] = self.id
         values.pop("id")
-        return DispatchRun(**values)
+        return DispatchRun(**values, _transition_token=_TRANSITION_TOKEN)
 
     def start_active(self) -> DispatchRun:
         """Transition pending to active; input fields freeze here."""

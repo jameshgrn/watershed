@@ -46,16 +46,55 @@ def _deposit(*, state: str = "submitted", claims: tuple[str, ...] = ("claim:code
     )
     if state == "submitted":
         return deposit
-    return Deposit(
-        from_dispatch_run_id=deposit.from_dispatch_run_id,
-        worktree_id=deposit.worktree_id,
-        commit_ref=deposit.commit_ref,
-        claims=deposit.claims,
-        file_changes=deposit.file_changes,
-        submitted_at=deposit.submitted_at,
-        state=cast(Any, state),
-        _id=deposit.id,
-    )
+    if state == "validated":
+        validation = validate_deposit_integrity(
+            deposit,
+            known_claims=claims,
+            validator_set_hash="validators:v0",
+            validated_at=_dt(1),
+            signed_by="watermaster:avulsion",
+        )
+        return apply_validation_to_deposit(deposit, validation)
+    if state == "rejected":
+        validation = validate_deposit_integrity(
+            deposit,
+            known_claims=("claim:unknown",),
+            validator_set_hash="validators:v0",
+            validated_at=_dt(1),
+            signed_by="watermaster:avulsion",
+        )
+        return apply_validation_to_deposit(deposit, validation)
+    raise ValueError(f"unknown test deposit state: {state}")
+
+
+def test_validation_rejects_explicit_id_override() -> None:
+    kwargs: dict[str, Any] = {
+        "deposit_id": _deposit().id,
+        "validator_set_hash": "validators:v0",
+        "schema_pins": (),
+        "checks": (ValidationCheck("claim:code", "pass", "ok"),),
+        "verdict": "pass",
+        "reason": "all integrity checks passed",
+        "validated_at": _dt(),
+        "signed_by": "watermaster:avulsion",
+        "_id": "validation:forged",
+    }
+
+    with pytest.raises(TypeError, match="_id"):
+        Validation(**kwargs)
+
+
+def test_deposit_state_cannot_be_forged_for_validation() -> None:
+    with pytest.raises(ValueError, match="transition functions"):
+        Deposit(
+            from_dispatch_run_id="disprun:abc123",
+            worktree_id="/tmp/wt-a",
+            commit_ref=None,
+            claims=("claim:code",),
+            file_changes=FileChangeSet((CreatedFileChange("src/a.py", HASH_A),)),
+            submitted_at=_dt(),
+            state=cast(Any, "validated"),
+        )
 
 
 def test_validate_deposit_integrity_passes_known_claims() -> None:

@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Any, cast
+
+import pytest
+
 from distributary.plan import (
     PlanSpec,
     PlanUnit,
@@ -127,6 +131,105 @@ class TestSlugValidation:
         issues = validate_plan(plan)
         assert len(issues) == 1
         assert "Invalid slug" in issues[0].message
+
+    def test_unit_key_must_match_unit_slug(self):
+        plan = PlanSpec(
+            name="mismatch",
+            goal="Goal",
+            units={
+                "task-a": PlanUnit(
+                    slug="task-b",
+                    summary="Task",
+                    prompt="Do it",
+                    commit_message="Done",
+                    files=PlanUnitFiles(),
+                )
+            },
+        )
+
+        issues = validate_plan(plan)
+
+        assert len(issues) == 1
+        assert "does not match" in issues[0].message
+
+
+class TestPlanSpecImmutability:
+    def test_units_mapping_is_immutable(self):
+        plan = PlanSpec(
+            name="immutable",
+            goal="Goal",
+            units={
+                "task-a": PlanUnit(
+                    slug="task-a",
+                    summary="Task",
+                    prompt="Do it",
+                    commit_message="Done",
+                    files=PlanUnitFiles(),
+                )
+            },
+        )
+
+        units = cast(Any, plan.units)
+        with pytest.raises(TypeError):
+            units["task-b"] = PlanUnit(
+                slug="task-b",
+                summary="Task B",
+                prompt="Do B",
+                commit_message="B",
+                files=PlanUnitFiles(),
+            )
+
+
+class TestDependencyValidation:
+    def test_missing_dependency_fails(self):
+        plan = PlanSpec(
+            name="missing-dep",
+            goal="Goal",
+            units={
+                "task-a": PlanUnit(
+                    slug="task-a",
+                    summary="Task",
+                    prompt="Do it",
+                    commit_message="Done",
+                    files=PlanUnitFiles(),
+                    depends_on=("task-missing",),
+                )
+            },
+        )
+
+        issues = validate_plan(plan)
+
+        assert len(issues) == 1
+        assert "unknown unit" in issues[0].message
+
+    def test_dependency_cycle_fails(self):
+        plan = PlanSpec(
+            name="cycle",
+            goal="Goal",
+            units={
+                "task-a": PlanUnit(
+                    slug="task-a",
+                    summary="Task A",
+                    prompt="Do A",
+                    commit_message="A",
+                    files=PlanUnitFiles(),
+                    depends_on=("task-b",),
+                ),
+                "task-b": PlanUnit(
+                    slug="task-b",
+                    summary="Task B",
+                    prompt="Do B",
+                    commit_message="B",
+                    files=PlanUnitFiles(),
+                    depends_on=("task-a",),
+                ),
+            },
+        )
+
+        issues = validate_plan(plan)
+
+        assert len(issues) == 1
+        assert "cycle" in issues[0].message
 
 
 class TestFileClaimConflicts:

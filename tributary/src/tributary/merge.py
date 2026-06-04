@@ -7,8 +7,15 @@ from dataclasses import InitVar, dataclass, field
 from datetime import datetime
 
 from tributary._compat import _canonical_json, _require_utc
-from tributary.deposit import Deposit
+from tributary.deposit import _TRANSITION_TOKEN, Deposit
 from tributary.validation import Validation
+
+
+class _RecordToken:
+    pass
+
+
+_RECORD_TOKEN = _RecordToken()
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,9 +31,11 @@ class Merge:
     merge_strategy: str
     merged_at: datetime
     merged_by: str
-    _id: InitVar[str | None] = None
+    _record_token: InitVar[_RecordToken | None] = None
 
-    def __post_init__(self, _id: str | None) -> None:
+    def __post_init__(self, _record_token: _RecordToken | None) -> None:
+        if _record_token is not _RECORD_TOKEN:
+            raise ValueError("Merge records must be created by record_merge")
         _validate_deposit_id(self.deposit_id)
         _validate_validation_id(self.validation_id)
         _require_clean_string(self.target_branch, "target_branch")
@@ -35,7 +44,7 @@ class Merge:
         _require_clean_string(self.merge_strategy, "merge_strategy")
         _require_clean_string(self.merged_by, "merged_by")
         _require_utc(self.merged_at, "merged_at")
-        object.__setattr__(self, "id", _merge_id_from_instance(self, _id))
+        object.__setattr__(self, "id", _merge_id_from_instance(self))
 
 
 def record_merge(
@@ -68,6 +77,7 @@ def record_merge(
         merge_strategy=merge_strategy,
         merged_at=merged_at,
         merged_by=merged_by,
+        _record_token=_RECORD_TOKEN,
     )
 
 
@@ -88,7 +98,7 @@ def apply_merge_to_deposit(deposit: Deposit, merge: Merge) -> Deposit:
         submitted_at=deposit.submitted_at,
         state="merged",
         supersedes=deposit.supersedes,
-        _id=deposit.id,
+        _transition_token=_TRANSITION_TOKEN,
     )
 
 
@@ -120,10 +130,7 @@ def derive_merge_id(
     return f"merge:{digest}"
 
 
-def _merge_id_from_instance(merge: Merge, explicit_id: str | None) -> str:
-    if explicit_id is not None:
-        _validate_merge_id(explicit_id, "_id")
-        return explicit_id
+def _merge_id_from_instance(merge: Merge) -> str:
     return derive_merge_id(
         deposit_id=merge.deposit_id,
         validation_id=merge.validation_id,
@@ -142,11 +149,6 @@ def _validate_deposit_id(value: str) -> None:
 def _validate_validation_id(value: str) -> None:
     if not value.startswith("validation:"):
         raise ValueError("validation_id must reference a Validation id with 'validation:' prefix")
-
-
-def _validate_merge_id(value: str, field_name: str) -> None:
-    if not value.startswith("merge:"):
-        raise ValueError(f"{field_name} must reference a Merge id with 'merge:' prefix")
 
 
 def _require_clean_string(value: str, field_name: str) -> None:

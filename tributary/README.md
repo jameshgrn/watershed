@@ -45,6 +45,9 @@ Half of `dgov/` - the fan-in half. v0 keeps typed fan-in records in memory.
 - **No distributary runtime import** - submit from a protocol-shaped dispatch record.
 - **No worktree discovery** - file changes are supplied data, not git diff output.
 - **No real merge execution** - merge records consume supplied commit evidence; no git operations.
+- **Transition-only deposits** - submitted Deposits advance through validation and merge functions.
+- **Factory-only merge records** - Merge records are built by `record_merge`, not direct construction.
+- **Derived IDs only** - record constructors do not accept explicit id overrides.
 - **No baseline** - Merge does not run sentrux or capture Baseline records.
 - **No registry or persistence** - validation consumes supplied data and emits records only.
 

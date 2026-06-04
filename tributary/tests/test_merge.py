@@ -179,6 +179,40 @@ def test_record_merge_rejects_validated_deposit_with_fail_validation() -> None:
         _merge(deposit, failed_validation)
 
 
+def test_merge_rejects_direct_construction() -> None:
+    deposit, validation = _validated_deposit()
+
+    with pytest.raises(ValueError, match="record_merge"):
+        Merge(
+            deposit_id=deposit.id,
+            validation_id=validation.id,
+            target_branch="main",
+            base_commit="abc123",
+            merged_commit="def456",
+            merge_strategy="fast-forward",
+            merged_at=_dt(2),
+            merged_by="watermaster:avulsion",
+        )
+
+
+def test_merge_rejects_explicit_id_override() -> None:
+    deposit, validation = _validated_deposit()
+    kwargs: dict[str, Any] = {
+        "deposit_id": deposit.id,
+        "validation_id": validation.id,
+        "target_branch": "main",
+        "base_commit": "abc123",
+        "merged_commit": "def456",
+        "merge_strategy": "fast-forward",
+        "merged_at": _dt(2),
+        "merged_by": "watermaster:avulsion",
+        "_id": "merge:forged",
+    }
+
+    with pytest.raises(TypeError, match="_id"):
+        Merge(**kwargs)
+
+
 def test_apply_merge_returns_merged_deposit_without_mutating_original() -> None:
     deposit, validation = _validated_deposit()
     merge = _merge(deposit, validation)
@@ -215,8 +249,6 @@ def test_apply_merge_rejects_non_validated_deposit() -> None:
 @pytest.mark.parametrize(
     ("field_name", "overrides"),
     [
-        ("deposit_id", {"deposit_id": "disprun:abc"}),
-        ("validation_id", {"validation_id": "deposit:abc"}),
         ("target_branch", {"target_branch": ""}),
         ("base_commit", {"base_commit": " abc123"}),
         ("merged_commit", {"merged_commit": ""}),
@@ -227,8 +259,6 @@ def test_apply_merge_rejects_non_validated_deposit() -> None:
 def test_merge_rejects_invalid_fields(field_name: str, overrides: dict[str, str]) -> None:
     deposit, validation = _validated_deposit()
     kwargs: dict[str, object] = {
-        "deposit_id": deposit.id,
-        "validation_id": validation.id,
         "target_branch": "main",
         "base_commit": "abc123",
         "merged_commit": "def456",
@@ -239,16 +269,16 @@ def test_merge_rejects_invalid_fields(field_name: str, overrides: dict[str, str]
     kwargs.update(overrides)
 
     with pytest.raises(ValueError, match=field_name):
-        Merge(**cast(Any, kwargs))
+        record_merge(deposit, validation, **cast(Any, kwargs))
 
 
 def test_merge_rejects_naive_merged_at() -> None:
     deposit, validation = _validated_deposit()
 
     with pytest.raises(ValueError, match="merged_at"):
-        Merge(
-            deposit_id=deposit.id,
-            validation_id=validation.id,
+        record_merge(
+            deposit,
+            validation,
             target_branch="main",
             base_commit="abc123",
             merged_commit="def456",
@@ -262,32 +292,15 @@ def test_merge_rejects_non_utc_merged_at() -> None:
     deposit, validation = _validated_deposit()
 
     with pytest.raises(ValueError, match="UTC"):
-        Merge(
-            deposit_id=deposit.id,
-            validation_id=validation.id,
+        record_merge(
+            deposit,
+            validation,
             target_branch="main",
             base_commit="abc123",
             merged_commit="def456",
             merge_strategy="fast-forward",
             merged_at=datetime(2026, 5, 18, 12, 0, 0, tzinfo=timezone(timedelta(hours=1))),
             merged_by="watermaster:avulsion",
-        )
-
-
-def test_merge_rejects_invalid_explicit_id() -> None:
-    deposit, validation = _validated_deposit()
-
-    with pytest.raises(ValueError, match="_id"):
-        Merge(
-            deposit_id=deposit.id,
-            validation_id=validation.id,
-            target_branch="main",
-            base_commit="abc123",
-            merged_commit="def456",
-            merge_strategy="fast-forward",
-            merged_at=_dt(2),
-            merged_by="watermaster:avulsion",
-            _id="validation:abc",
         )
 
 

@@ -286,6 +286,33 @@ def test_deposit_rejects_invalid_state() -> None:
         )
 
 
+def test_deposit_rejects_direct_validated_state() -> None:
+    with pytest.raises(ValueError, match="transition functions"):
+        Deposit(
+            from_dispatch_run_id="disprun:abc123",
+            worktree_id="/tmp/wt-a",
+            commit_ref=None,
+            claims=("claim:code",),
+            file_changes=_changes(),
+            submitted_at=_dt(),
+            state="validated",
+        )
+
+
+def test_deposit_rejects_explicit_id_override() -> None:
+    kwargs: dict[str, Any] = {
+        "from_dispatch_run_id": "disprun:abc123",
+        "worktree_id": "/tmp/wt-a",
+        "commit_ref": None,
+        "claims": ("claim:code",),
+        "file_changes": _changes(),
+        "submitted_at": _dt(),
+        "_id": "deposit:forged",
+    }
+    with pytest.raises(TypeError, match="_id"):
+        Deposit(**kwargs)
+
+
 def test_deposit_rejects_invalid_supersedes_id() -> None:
     with pytest.raises(ValueError, match="supersedes"):
         Deposit(

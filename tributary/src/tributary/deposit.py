@@ -17,6 +17,13 @@ _DEPOSIT_STATES = frozenset({"submitted", "validated", "merged", "rejected", "su
 _CLAIM_RE = re.compile(r"^[a-z][a-z0-9_.:-]*$")
 
 
+class _TransitionToken:
+    pass
+
+
+_TRANSITION_TOKEN = _TransitionToken()
+
+
 class DispatchRunRecord(Protocol):
     """Protocol shape tributary needs from a dispatch record."""
 
@@ -112,18 +119,20 @@ class Deposit:
     submitted_at: datetime
     state: DepositState = "submitted"
     supersedes: str | None = None
-    _id: InitVar[str | None] = None
+    _transition_token: InitVar[_TransitionToken | None] = None
 
-    def __post_init__(self, _id: str | None) -> None:
+    def __post_init__(self, _transition_token: _TransitionToken | None) -> None:
         _validate_dispatch_run_id(self.from_dispatch_run_id)
         _validate_worktree_id(self.worktree_id)
         _validate_commit_ref(self.commit_ref)
         _validate_deposit_state(self.state)
+        if _transition_token is not _TRANSITION_TOKEN and self.state != "submitted":
+            raise ValueError("Deposit state transitions must use tributary transition functions")
         _require_utc(self.submitted_at, "submitted_at")
         if self.supersedes is not None:
             _validate_deposit_id(self.supersedes, "supersedes")
         object.__setattr__(self, "claims", _normalize_claims(self.claims))
-        object.__setattr__(self, "id", _deposit_id_from_instance(self, _id))
+        object.__setattr__(self, "id", _deposit_id_from_instance(self))
 
 
 def submit_deposit_from_dispatch_run(
@@ -172,10 +181,7 @@ def derive_deposit_id(
     return f"deposit:{digest}"
 
 
-def _deposit_id_from_instance(deposit: Deposit, explicit_id: str | None) -> str:
-    if explicit_id is not None:
-        _validate_deposit_id(explicit_id, "_id")
-        return explicit_id
+def _deposit_id_from_instance(deposit: Deposit) -> str:
     return derive_deposit_id(
         from_dispatch_run_id=deposit.from_dispatch_run_id,
         claims=deposit.claims,
