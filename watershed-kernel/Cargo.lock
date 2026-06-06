@@ -355,19 +355,23 @@ dependencies = [
 name = "watershed-distributary"
 version = "0.1.0"
 dependencies = [
+ "schemars",
+ "serde",
  "serde_json",
  "sha2",
  "thiserror",
- "trybuild",
  "watershed-contracts",
- "watershed-tributary",
 ]
 
 [[package]]
 name = "watershed-tributary"
 version = "0.1.0"
 dependencies = [
+ "serde_json",
+ "sha2",
+ "trybuild",
  "watershed-contracts",
+ "watershed-distributary",
 ]
 
 [[package]]
@@ -408,6 +412,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "watershed-contracts",
+ "watershed-distributary",
 ]
 
 [[package]]

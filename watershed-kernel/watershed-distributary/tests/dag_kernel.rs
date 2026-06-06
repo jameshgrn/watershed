@@ -27,8 +27,17 @@ fn file_claim(path: &str) -> FileClaim {
     }
 }
 
+fn task_files_for(deps: &BTreeMap<String, Vec<String>>) -> BTreeMap<String, Vec<FileClaim>> {
+    deps.keys()
+        .map(|task| (task.clone(), vec![file_claim(&format!("src/{task}.rs"))]))
+        .collect()
+}
+
 fn kernel<const N: usize>(spec: [(&str, &[&str]); N]) -> DagKernel {
-    DagKernel::new(dep_map(spec)).expect("test DAG should be valid")
+    let deps = dep_map(spec);
+    let task_files = task_files_for(&deps);
+
+    DagKernel::new(deps, task_files).expect("test DAG should be valid")
 }
 
 fn dispatched(slug: &str, pane: &str) -> DagEvent {
@@ -201,12 +210,18 @@ fn topo_sort_is_deterministic_and_detects_cycles() {
 
 #[test]
 fn raw_kernel_definition_rejects_empty_task_identity() {
-    let empty_task =
-        DagKernel::new(dep_map([("", &[])])).expect_err("empty task slug should be rejected");
+    let empty_task = DagKernel::new(
+        dep_map([("", &[])]),
+        BTreeMap::from([("".to_owned(), vec![file_claim("src/empty.rs")])]),
+    )
+    .expect_err("empty task slug should be rejected");
     assert!(matches!(empty_task, DagError::EmptyTaskSlug));
 
-    let empty_dependency = DagKernel::new(dep_map([("a", &[""])]))
-        .expect_err("empty dependency slug should be rejected");
+    let empty_dependency = DagKernel::new(
+        dep_map([("a", &[""])]),
+        BTreeMap::from([("a".to_owned(), vec![file_claim("src/a.rs")])]),
+    )
+    .expect_err("empty dependency slug should be rejected");
     assert!(matches!(
         empty_dependency,
         DagError::EmptyDependency { task } if task == "a"
@@ -217,22 +232,66 @@ fn raw_kernel_definition_rejects_empty_task_identity() {
 fn raw_kernel_task_files_reject_invalid_claim_shape() {
     let deps = dep_map([("a", &[])]);
 
-    let missing_claims =
-        DagKernel::with_task_files(deps.clone(), BTreeMap::from([("a".to_owned(), Vec::new())]))
-            .expect_err("empty task file claim set should be rejected");
+    let missing_claims = DagKernel::new(deps.clone(), BTreeMap::new())
+        .expect_err("missing task file claims should be rejected");
     assert!(matches!(
         missing_claims,
         DagError::MissingClaims { task } if task == "a"
     ));
 
-    let empty_path = DagKernel::with_task_files(
-        deps,
+    let empty_claims = DagKernel::new(deps.clone(), BTreeMap::from([("a".to_owned(), Vec::new())]))
+        .expect_err("empty task file claim set should be rejected");
+    assert!(matches!(
+        empty_claims,
+        DagError::MissingClaims { task } if task == "a"
+    ));
+
+    let empty_path = DagKernel::new(
+        deps.clone(),
         BTreeMap::from([("a".to_owned(), vec![file_claim(" ")])]),
     )
     .expect_err("empty task file claim path should be rejected");
     assert!(matches!(
         empty_path,
         DagError::EmptyClaimPath { task } if task == "a"
+    ));
+
+    let unknown_task_files = DagKernel::new(
+        deps,
+        BTreeMap::from([
+            ("a".to_owned(), vec![file_claim("src/a.rs")]),
+            ("unknown".to_owned(), vec![file_claim("src/unknown.rs")]),
+        ]),
+    )
+    .expect_err("task files for unknown tasks should be rejected");
+    assert!(matches!(
+        unknown_task_files,
+        DagError::UnknownTaskFiles { task } if task == "unknown"
+    ));
+}
+
+#[test]
+fn raw_kernel_rejects_independent_conflicting_task_files() {
+    let err = DagKernel::new(
+        dep_map([("a", &[]), ("b", &[])]),
+        BTreeMap::from([
+            ("a".to_owned(), vec![file_claim("src/lib.rs")]),
+            ("b".to_owned(), vec![file_claim("./src/lib.rs")]),
+        ]),
+    )
+    .expect_err("independent raw kernel task claims should not overlap");
+
+    assert!(matches!(
+        err,
+        DagError::ConflictingClaims {
+            left_task,
+            left_path,
+            right_task,
+            right_path
+        } if left_task == "a"
+            && left_path == "src/lib.rs"
+            && right_task == "b"
+            && right_path == "src/lib.rs"
     ));
 }
 

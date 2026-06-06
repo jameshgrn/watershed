@@ -3,9 +3,10 @@ use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
 use std::{env, fs, path::Path};
 use watershed_contracts::{
-    ClaimKind, Deposit, FileClaim, Policy, PressureTest, RecoveredIntent, RollbackSpec,
-    VerificationSpec, WorkClass,
+    ClaimKind, FileClaim, Policy, PressureTest, RecoveredIntent, RollbackSpec, VerificationSpec,
+    WorkClass,
 };
+use watershed_distributary::Deposit;
 
 type XtaskResult<T> = Result<T, Box<dyn std::error::Error>>;
 

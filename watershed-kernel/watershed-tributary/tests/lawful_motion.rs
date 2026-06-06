@@ -1,9 +1,10 @@
 use std::path::PathBuf;
 use watershed_contracts::{pressure_tests, ClaimKind, FileClaim, Policy, RecoveredIntent};
 use watershed_distributary::{collect, dispatch, mock_worker, Drafted, Plan};
+use watershed_tributary::{baseline, merge, validate, Validation};
 
 #[test]
-fn run_ceremony_produces_collectable_deposit() {
+fn full_ceremony_produces_baseline() {
     let intent = RecoveredIntent {
         goal: "build a typed dispatcher kernel".to_owned(),
         scope: vec!["in-memory ceremony".to_owned()],
@@ -32,17 +33,17 @@ fn run_ceremony_produces_collectable_deposit() {
         .validate(&policy)
         .expect("policy should validate");
     let pending = dispatch(plan);
-    let run_id = pending.id().to_owned();
     let running = pending.start();
     let completed = mock_worker(running);
     let (deposit, claims) = collect(completed);
+    let accepted = match validate(deposit, &claims) {
+        Validation::Accepted(accepted) => accepted,
+        Validation::Rejected(rejected) => {
+            panic!("deposit was rejected: {}", rejected.reason());
+        }
+    };
+    let merged = merge(accepted);
+    let anchored = baseline(merged);
 
-    assert!(deposit.id().starts_with("deposit:"));
-    assert_eq!(deposit.run_id(), run_id);
-    assert_eq!(deposit.summary(), "synthetic deposit");
-    assert_eq!(
-        deposit.touched_files(),
-        &[PathBuf::from("watershed-distributary/src/lib.rs")]
-    );
-    assert_eq!(claims.len(), 1);
+    assert!(anchored.id().starts_with("baseline:"));
 }

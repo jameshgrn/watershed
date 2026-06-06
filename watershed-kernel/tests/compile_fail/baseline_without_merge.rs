@@ -1,16 +1,10 @@
-use watershed_contracts::{Deposit, FileClaim};
-use watershed_tributary::{baseline, validate, Validation};
+use watershed_tributary::{baseline, AcceptedValidation};
 
 fn main() {
-    let deposit = Deposit {
-        run_id: "run-1".to_owned(),
-        summary: "synthetic deposit".to_owned(),
-        touched_files: Vec::new(),
-    };
-    let claims = Vec::<FileClaim>::new();
-    let validation = validate(deposit, &claims);
+    let accepted = accepted();
+    let _baseline = baseline(accepted);
+}
 
-    if let Validation::Accepted(accepted) = validation {
-        let _baseline = baseline(accepted);
-    }
+fn accepted() -> AcceptedValidation {
+    panic!("compile-fail fixture is not executed")
 }

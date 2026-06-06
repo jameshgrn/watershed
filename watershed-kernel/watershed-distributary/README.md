@@ -1,7 +1,8 @@
 # watershed-distributary
 
 This crate owns outbound lawful motion through the pure DAG kernel, the `Plan`
-state machine, and worker `Run` transitions.
+state machine, worker `Run` transitions, and authoritative `Deposit` records
+collected from completed runs.
 
 ## DAG Kernel
 
@@ -38,6 +39,10 @@ independent tasks with overlapping write authority unless the overlap is
 explicitly shared. `DagPlan::compile_kernel()` carries each task's `FileClaim`s
 into the `MergeTask` action that settlement consumes.
 
+Direct `DagKernel::new(...)` construction also requires file claims for every
+declared task and rejects independent conflicting claims. It is not a claim-law
+bypass around `DagPlan`.
+
 ## Plan Ceremony
 
 Legal `Plan` transitions:
@@ -47,6 +52,10 @@ Legal `Plan` transitions:
 - `Plan<IntentRecovered>::declare_claims(...) -> Plan<ClaimsDeclared>`
 - `Plan<ClaimsDeclared>::compile(...) -> Plan<Compiled>`
 - `Plan<Compiled>::validate(...) -> Plan<Validated>`
+
+Validation enforces the policy's claim requirements, shared-claim setting,
+retry budget capture, and `required_pressure_tests` registry names. It validates
+that required pressure-test names exist; it does not run tests.
 
 Legal run motion:
 
@@ -58,7 +67,9 @@ Legal run motion:
 - `mock_worker(Run<Running>) -> Run<Completed>` (test helper)
 - `collect(Run<Completed>) -> (Deposit, Vec<FileClaim>)`
 
-The run carries `id`, `intent`, `claims`, `retried_from`, `retry_index`, and the validating policy's retry budget forward from dispatch through every state, so `collect` can return both the worker's `Deposit` and the dispatch-time `FileClaim`s for downstream claims-integrity validation.
+`Deposit` has no public constructor. A deposit is created only by the consuming `Run<Running>::complete(...)` transition, stored inside `Run<Completed>`, and released by `collect(...)` with the dispatch-time `FileClaim`s for downstream claims-integrity validation. Its `deposit:` id is content-derived from the producing run id, summary, and sorted touched files.
+
+The run carries `id`, `intent`, `claims`, `retried_from`, `retry_index`, and the validating policy's retry budget forward from dispatch through every state, so the completed-run deposit cites the run that produced it.
 
 Original dispatch creates a run with no retry parent and `retry_index == 0`.
 Retrying a failed run consumes `Run<Failed>`, checks the validating policy's `max_retries`, preserves the same intent and claims, sets `retried_from` to the failed parent run id, increments `retry_index`, and derives a fresh lineage-aware run id.

@@ -8,3 +8,4 @@ schemars.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
 watershed-contracts.workspace = true
+watershed-distributary.workspace = true

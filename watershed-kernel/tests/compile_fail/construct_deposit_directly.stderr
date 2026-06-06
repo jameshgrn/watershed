@@ -1,0 +1,14 @@
+error[E0624]: associated function `new` is private
+ --> $WORKSPACE/tests/compile_fail/construct_deposit_directly.rs
+  |
+  |       let _deposit = Deposit::new("run-1", "synthetic deposit", Vec::<PathBuf>::new());
+  |                               ^^^ private associated function
+  |
+ ::: $WORKSPACE/watershed-distributary/src/lib.rs
+  |
+  | /     fn new(
+  | |         run_id: impl Into<String>,
+  | |         summary: impl Into<String>,
+  | |         touched_files: Vec<PathBuf>,
+  | |     ) -> Self {
+  | |_____________- private associated function defined here

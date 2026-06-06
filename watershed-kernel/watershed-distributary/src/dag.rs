@@ -379,7 +379,7 @@ impl DagPlan {
         let plan = Self { tasks: task_map };
         let deps = plan.deps();
         topological_sort(&deps)?;
-        validate_claim_conflicts(&plan.tasks, &deps)?;
+        validate_claim_conflicts(&plan.task_files(), &deps)?;
 
         Ok(plan)
     }
@@ -393,7 +393,7 @@ impl DagPlan {
     }
 
     pub fn compile_kernel(&self) -> Result<DagKernel, DagError> {
-        DagKernel::with_task_files(self.deps(), self.task_files())
+        DagKernel::new(self.deps(), self.task_files())
     }
 
     fn deps(&self) -> BTreeMap<String, Vec<String>> {
@@ -425,15 +425,12 @@ pub struct DagKernel {
 }
 
 impl DagKernel {
-    pub fn new(deps: BTreeMap<String, Vec<String>>) -> Result<Self, DagError> {
-        Self::with_task_files(deps, BTreeMap::new())
-    }
-
-    pub fn with_task_files(
+    pub fn new(
         deps: BTreeMap<String, Vec<String>>,
         task_files: BTreeMap<String, Vec<FileClaim>>,
     ) -> Result<Self, DagError> {
         validate_task_files(&deps, &task_files)?;
+        validate_claim_conflicts(&task_files, &deps)?;
         let merge_order = topological_sort(&deps)?;
         let task_states = deps
             .keys()
@@ -779,7 +776,11 @@ impl DagKernel {
                 return vec![MergeTask {
                     task_slug: slug.clone(),
                     pane_slug,
-                    file_claims: self.task_files.get(slug).cloned().unwrap_or_default(),
+                    file_claims: self
+                        .task_files
+                        .get(slug)
+                        .cloned()
+                        .expect("kernel task files are validated for every task"),
                 }
                 .into()];
             }
@@ -858,13 +859,21 @@ fn validate_task_files(
     deps: &BTreeMap<String, Vec<String>>,
     task_files: &BTreeMap<String, Vec<FileClaim>>,
 ) -> Result<(), DagError> {
-    for (task, claims) in task_files {
-        if !deps.contains_key(task) {
-            return Err(DagError::UnknownTaskFiles { task: task.clone() });
-        }
+    validate_deps(deps)?;
+
+    for task in deps.keys() {
+        let Some(claims) = task_files.get(task) else {
+            return Err(DagError::MissingClaims { task: task.clone() });
+        };
 
         if claims.is_empty() {
             return Err(DagError::MissingClaims { task: task.clone() });
+        }
+    }
+
+    for (task, claims) in task_files {
+        if !deps.contains_key(task) {
+            return Err(DagError::UnknownTaskFiles { task: task.clone() });
         }
 
         if claims
@@ -879,10 +888,10 @@ fn validate_task_files(
 }
 
 fn validate_claim_conflicts(
-    tasks: &BTreeMap<String, DagTask>,
+    task_claims: &BTreeMap<String, Vec<FileClaim>>,
     deps: &BTreeMap<String, Vec<String>>,
 ) -> Result<(), DagError> {
-    let slugs = tasks.keys().collect::<Vec<_>>();
+    let slugs = task_claims.keys().collect::<Vec<_>>();
 
     for (index, left_slug) in slugs.iter().enumerate() {
         for right_slug in slugs.iter().skip(index + 1) {
@@ -891,7 +900,7 @@ fn validate_claim_conflicts(
             }
 
             if let Some(conflict) =
-                first_claim_conflict(&tasks[*left_slug].claims, &tasks[*right_slug].claims)
+                first_claim_conflict(&task_claims[*left_slug], &task_claims[*right_slug])
             {
                 return Err(DagError::ConflictingClaims {
                     left_task: (*left_slug).clone(),

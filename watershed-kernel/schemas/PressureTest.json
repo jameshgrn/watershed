@@ -1,7 +1,7 @@
 {
-  "$comment": "PressureTest schema content sha256 0378d56c753a558fad28516fb65b0b4b087746a4d426cdbc29ec941b843e9ed2",
+  "$comment": "PressureTest schema content sha256 16c792e4c7d3c20a5fb6a75e0ea60461487afe52d40459b0ccd7fcc58306e02d",
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "description": "A named compile-time invariant and the test that enforces it.",
+  "description": "A named invariant and the deterministic test that enforces it.",
   "properties": {
     "claim": {
       "type": "string"
