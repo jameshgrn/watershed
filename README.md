@@ -46,7 +46,8 @@ watershed/
 
 The Rust kernel is the first real source inside this tree. Non-kernel modules
 are pending migration unless their local README states otherwise. Retired
-top-level `distributary/` and `tributary/` scaffolding is not authoritative.
+top-level `distributary/` and `tributary/` package scaffolds should not be
+recreated.
 
 ## Two Axes
 
