@@ -33,15 +33,17 @@ Merge completion is reported through `TaskMergeOutcome`, not an optional error
 field.
 
 `DagTask` and `DagPlan` are the typed declaration layer immediately before
-kernel state. `DagTask::new(...)` rejects claimless work, canonicalizes valid file claims, and
+kernel state. `DagTask::new(...)` rejects empty or padded task and dependency
+slugs, rejects claimless work, and canonicalizes valid file claims.
 `DagPlan::new(...)` rejects duplicate slugs, unknown dependencies, cycles, and
 independent tasks with overlapping write authority unless the overlap is
 explicitly shared. `DagPlan::compile_kernel()` carries each task's `FileClaim`s
 into the `MergeTask` action that settlement consumes.
 
 Direct `DagKernel::new(...)` construction also requires file claims for every
-declared task, canonicalizes valid file claims, and rejects independent
-conflicting claims. It is not a claim-law bypass around `DagPlan`.
+declared task, rejects empty or padded task and dependency slugs, canonicalizes
+valid file claims, and rejects independent conflicting claims. It is not a
+claim-law bypass around `DagPlan`.
 
 ## Plan Ceremony
 

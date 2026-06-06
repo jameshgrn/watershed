@@ -283,8 +283,14 @@ pub enum DagError {
     Cycle { task: String },
     #[error("DAG task slug cannot be empty")]
     EmptyTaskSlug,
+    #[error("DAG task slug must not have leading or trailing whitespace: '{task}'")]
+    PaddedTaskSlug { task: String },
     #[error("DAG task '{task}' has an empty dependency slug")]
     EmptyDependency { task: String },
+    #[error(
+        "DAG task '{task}' dependency slug must not have leading or trailing whitespace: '{dependency}'"
+    )]
+    PaddedDependencySlug { task: String, dependency: String },
     #[error("DAG task '{task}' must declare at least one file claim")]
     MissingClaims { task: String },
     #[error("DAG task '{task}' has invalid file claim path '{path:?}': {source}")]
@@ -325,11 +331,21 @@ impl DagTask {
             return Err(DagError::EmptyTaskSlug);
         }
 
-        if depends_on
-            .iter()
-            .any(|dependency| dependency.trim().is_empty())
-        {
-            return Err(DagError::EmptyDependency { task: slug });
+        if has_padding(&slug) {
+            return Err(DagError::PaddedTaskSlug { task: slug });
+        }
+
+        for dependency in &depends_on {
+            if dependency.trim().is_empty() {
+                return Err(DagError::EmptyDependency { task: slug });
+            }
+
+            if has_padding(dependency) {
+                return Err(DagError::PaddedDependencySlug {
+                    task: slug,
+                    dependency: dependency.clone(),
+                });
+            }
         }
 
         if claims.is_empty() {
@@ -837,9 +853,20 @@ fn validate_deps(deps: &BTreeMap<String, Vec<String>>) -> Result<(), DagError> {
             return Err(DagError::EmptyTaskSlug);
         }
 
+        if has_padding(task) {
+            return Err(DagError::PaddedTaskSlug { task: task.clone() });
+        }
+
         for dependency in task_deps {
             if dependency.trim().is_empty() {
                 return Err(DagError::EmptyDependency { task: task.clone() });
+            }
+
+            if has_padding(dependency) {
+                return Err(DagError::PaddedDependencySlug {
+                    task: task.clone(),
+                    dependency: dependency.clone(),
+                });
             }
 
             if !deps.contains_key(dependency) {
@@ -852,6 +879,10 @@ fn validate_deps(deps: &BTreeMap<String, Vec<String>>) -> Result<(), DagError> {
     }
 
     Ok(())
+}
+
+fn has_padding(value: &str) -> bool {
+    value.trim() != value
 }
 
 fn canonicalize_task_files(

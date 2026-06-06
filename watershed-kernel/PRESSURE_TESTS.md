@@ -34,6 +34,8 @@ retry_respects_max_retries is enforced by `watershed-distributary/tests/retry_bu
 
 run_ids_use_canonical_claims is enforced by `watershed-distributary/tests/run_id_identity.rs`. The rule is that validated plan dispatch derives run ids from canonical file claims. Equivalent claim authority spellings such as `./a.rs` and `a.rs` produce equal run ids and the dispatched run carries the canonical claim path.
 
+dag_task_slugs_reject_padding is enforced by `watershed-distributary/tests/dag_plan.rs` and `watershed-distributary/tests/dag_kernel.rs`. The rule is that typed DAG tasks and raw DAG kernel definitions reject task and dependency slugs with leading or trailing whitespace. Task identity is literal after validation; the kernel does not trim ambiguous names into place.
+
 deposit_ids_are_derived is enforced by `watershed-distributary/tests/worker_lifecycle.rs`. The rule is that authoritative `Deposit` records receive content-derived `deposit:` ids from the producing run id, summary, and canonical sorted touched files. Equivalent completed runs with the same touched files in a different input order or current-directory spelling produce equal deposit ids.
 
 required_pressure_tests_are_registered is enforced by `watershed-distributary/tests/policy_pressure_tests.rs`. The rule is that `Plan<Compiled>::validate(...)` rejects any `Policy.required_pressure_tests` name absent from the `pressure_tests()` registry. This validates names only; it does not run tests, schedule tests, or add an effect layer.
