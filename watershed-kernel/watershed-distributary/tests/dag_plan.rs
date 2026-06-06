@@ -22,7 +22,7 @@ fn claim(path: &str, kind: ClaimKind) -> FileClaim {
 }
 
 fn root_task() -> DagTask {
-    DagTask::new("root", Vec::new(), vec![file_claim("src/root.rs")])
+    DagTask::new("root", Vec::new(), vec![file_claim("./src/root.rs")])
         .expect("root task should be valid")
 }
 

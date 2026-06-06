@@ -134,6 +134,18 @@ fn merge_pane<'a>(actions: &'a [DagAction], slug: &str) -> Option<&'a str> {
     })
 }
 
+fn merge_claims<'a>(actions: &'a [DagAction], slug: &str) -> Option<&'a [FileClaim]> {
+    actions.iter().find_map(|action| {
+        if let DagAction::MergeTask(merge) = action {
+            if merge.task_slug == slug {
+                return Some(merge.file_claims.as_slice());
+            }
+        }
+
+        None
+    })
+}
+
 fn has_cleanup(actions: &[DagAction], slug: &str) -> bool {
     actions.iter().any(|action| {
         matches!(
@@ -313,6 +325,25 @@ fn raw_kernel_rejects_independent_conflicting_task_files() {
             && right_task == "b"
             && right_path == "src/lib.rs"
     ));
+}
+
+#[test]
+fn raw_kernel_canonicalizes_task_files_for_merge_actions() {
+    let mut kernel = DagKernel::new(
+        dep_map([("a", &[])]),
+        BTreeMap::from([("a".to_owned(), vec![file_claim("./src/a.rs")])]),
+    )
+    .expect("raw kernel should accept canonicalizable claims");
+
+    kernel.start();
+    kernel.handle(dispatched("a", "p-a"));
+    kernel.handle(wait_done("a", "p-a", TaskWaitOutcome::Done));
+    let actions = kernel.handle(review_done("a", TaskReviewOutcome::Passed));
+
+    assert_eq!(
+        merge_claims(&actions, "a").expect("review pass should emit merge claims"),
+        &[file_claim("src/a.rs")]
+    );
 }
 
 #[test]

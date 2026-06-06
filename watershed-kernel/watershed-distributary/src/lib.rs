@@ -108,14 +108,7 @@ impl Plan<ClaimsDeclared> {
             return Err(CompileError::MissingClaims);
         }
 
-        for claim in &claims {
-            claim
-                .validate_path()
-                .map_err(|source| CompileError::InvalidClaimPath {
-                    path: claim.path.clone(),
-                    source,
-                })?;
-        }
+        let claims = canonicalize_plan_claims(claims)?;
 
         Ok(Plan {
             state: Compiled { intent, claims },
@@ -276,6 +269,18 @@ fn normalized_deposit_path(path: PathBuf) -> PathBuf {
         Ok(normalized) => PathBuf::from(normalized),
         Err(_) => path,
     }
+}
+
+fn canonicalize_plan_claims(claims: Vec<FileClaim>) -> Result<Vec<FileClaim>, CompileError> {
+    claims
+        .into_iter()
+        .map(|claim| {
+            let path = claim.path.clone();
+            claim
+                .canonicalized()
+                .map_err(|source| CompileError::InvalidClaimPath { path, source })
+        })
+        .collect()
 }
 
 fn validate_required_pressure_tests(required: &[String]) -> Result<(), ValidationError> {
@@ -491,8 +496,9 @@ pub fn derive_run_id(
 ) -> String {
     let serialized_intent =
         serde_json::to_vec(intent).expect("RecoveredIntent serialization should be infallible");
+    let claims = canonicalize_claims_for_identity(claims);
     let serialized_claims =
-        serde_json::to_vec(claims).expect("FileClaim serialization should be infallible");
+        serde_json::to_vec(&claims).expect("FileClaim serialization should be infallible");
     let serialized_retried_from = serde_json::to_vec(&retried_from)
         .expect("retry lineage serialization should be infallible");
 
@@ -505,6 +511,13 @@ pub fn derive_run_id(
     let digest = hasher.finalize();
 
     format!("run:{digest:x}")
+}
+
+fn canonicalize_claims_for_identity(claims: &[FileClaim]) -> Vec<FileClaim> {
+    claims
+        .iter()
+        .map(|claim| claim.canonicalized().unwrap_or_else(|_| claim.clone()))
+        .collect()
 }
 
 pub fn dispatch(plan: Plan<Validated>) -> Run<Pending> {

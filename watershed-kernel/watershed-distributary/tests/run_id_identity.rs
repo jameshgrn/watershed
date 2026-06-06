@@ -33,7 +33,7 @@ fn validated_plan(goal: &str, path: &str, kind: ClaimKind) -> Plan<Validated> {
 fn equivalent_dispatches_produce_equal_run_ids() {
     let run_a = dispatch(validated_plan(
         "derive run id",
-        "a.rs",
+        "./a.rs",
         ClaimKind::Exclusive,
     ));
     let run_b = dispatch(validated_plan(
@@ -43,6 +43,27 @@ fn equivalent_dispatches_produce_equal_run_ids() {
     ));
 
     assert_eq!(run_a.id(), run_b.id());
+    assert_eq!(run_a.claims()[0].path, PathBuf::from("a.rs"));
+    assert_eq!(
+        derive_run_id(
+            run_a.intent(),
+            &[FileClaim {
+                path: PathBuf::from("./a.rs"),
+                kind: ClaimKind::Exclusive,
+            }],
+            None,
+            0,
+        ),
+        derive_run_id(
+            run_a.intent(),
+            &[FileClaim {
+                path: PathBuf::from("a.rs"),
+                kind: ClaimKind::Exclusive,
+            }],
+            None,
+            0,
+        )
+    );
 }
 
 #[test]

@@ -4,7 +4,7 @@ This crate owns canonical data shared across the workspace.
 
 - `RecoveredIntent`: structured goal, scope, constraints, and non-goals.
 - `WorkClass`: discrete category for planned work.
-- `FileClaim`: path plus requested claim kind, with shared path coverage, write-authority, and conflict semantics. Authority paths normalize to relative slash-separated paths and reject empty paths, absolute paths, parent traversal, and whitespace-only components.
+- `FileClaim`: path plus requested claim kind, with shared path coverage, write-authority, conflict semantics, and canonical authority form. Authority paths normalize to relative slash-separated paths and reject empty paths, absolute paths, parent traversal, and whitespace-only components.
 - `ClaimKind`: read-only, exclusive, or shared file authority.
 - `VerificationSpec`: declared checks for task success.
 - `RollbackSpec`: declared steps for reverting task work.
