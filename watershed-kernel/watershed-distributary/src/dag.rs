@@ -336,7 +336,7 @@ impl DagTask {
             return Err(DagError::MissingClaims { task: slug });
         }
 
-        validate_claim_paths(&slug, &claims)?;
+        let claims = canonicalize_claims(&slug, claims)?;
 
         Ok(Self {
             slug,
@@ -428,7 +428,7 @@ impl DagKernel {
         deps: BTreeMap<String, Vec<String>>,
         task_files: BTreeMap<String, Vec<FileClaim>>,
     ) -> Result<Self, DagError> {
-        validate_task_files(&deps, &task_files)?;
+        let task_files = canonicalize_task_files(&deps, task_files)?;
         validate_claim_conflicts(&task_files, &deps)?;
         let merge_order = topological_sort(&deps)?;
         let task_states = deps
@@ -854,10 +854,10 @@ fn validate_deps(deps: &BTreeMap<String, Vec<String>>) -> Result<(), DagError> {
     Ok(())
 }
 
-fn validate_task_files(
+fn canonicalize_task_files(
     deps: &BTreeMap<String, Vec<String>>,
-    task_files: &BTreeMap<String, Vec<FileClaim>>,
-) -> Result<(), DagError> {
+    task_files: BTreeMap<String, Vec<FileClaim>>,
+) -> Result<BTreeMap<String, Vec<FileClaim>>, DagError> {
     validate_deps(deps)?;
 
     for task in deps.keys() {
@@ -870,15 +870,17 @@ fn validate_task_files(
         }
     }
 
+    let mut canonical_task_files = BTreeMap::new();
     for (task, claims) in task_files {
-        if !deps.contains_key(task) {
+        if !deps.contains_key(&task) {
             return Err(DagError::UnknownTaskFiles { task: task.clone() });
         }
 
-        validate_claim_paths(task, claims)?;
+        let claims = canonicalize_claims(&task, claims)?;
+        canonical_task_files.insert(task, claims);
     }
 
-    Ok(())
+    Ok(canonical_task_files)
 }
 
 fn validate_claim_conflicts(
@@ -975,18 +977,20 @@ fn first_claim_conflict(
     None
 }
 
-fn validate_claim_paths(task: &str, claims: &[FileClaim]) -> Result<(), DagError> {
-    for claim in claims {
-        claim
-            .validate_path()
-            .map_err(|source| DagError::InvalidClaimPath {
-                task: task.to_owned(),
-                path: claim.path.clone(),
-                source,
-            })?;
-    }
-
-    Ok(())
+fn canonicalize_claims(task: &str, claims: Vec<FileClaim>) -> Result<Vec<FileClaim>, DagError> {
+    claims
+        .into_iter()
+        .map(|claim| {
+            let path = claim.path.clone();
+            claim
+                .canonicalized()
+                .map_err(|source| DagError::InvalidClaimPath {
+                    task: task.to_owned(),
+                    path,
+                    source,
+                })
+        })
+        .collect()
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -47,6 +47,14 @@ impl FileClaim {
         self.normalized_path().map(|_| ())
     }
 
+    /// Returns this claim with its path in canonical authority form.
+    pub fn canonicalized(&self) -> Result<Self, FileClaimPathError> {
+        Ok(Self {
+            path: PathBuf::from(self.normalized_path()?),
+            kind: self.kind.clone(),
+        })
+    }
+
     /// Returns whether this claim's path authority covers `path`.
     pub fn covers_path(&self, path: impl AsRef<Path>) -> Result<bool, FileClaimPathError> {
         Ok(path_covers(
@@ -197,6 +205,7 @@ pub const VALIDATION_REJECTS_UNCLAIMED_FILES: &str = "validation_rejects_unclaim
 pub const RETRY_COMPLETED_RUN: &str = "retry_completed_run";
 pub const RETRY_LINEAGE_FROM_FAILED: &str = "retry_lineage_from_failed";
 pub const RETRY_RESPECTS_MAX_RETRIES: &str = "retry_respects_max_retries";
+pub const RUN_IDS_USE_CANONICAL_CLAIMS: &str = "run_ids_use_canonical_claims";
 pub const DAG_KERNEL_SERIAL_MERGE_SCAN: &str = "dag_kernel_serial_merge_scan";
 pub const DAG_PLAN_CLAIMS_TRAVEL_TO_MERGE: &str = "dag_plan_claims_travel_to_merge";
 pub const DAG_PLAN_REJECTS_CONFLICTING_CLAIMS: &str = "dag_plan_rejects_conflicting_claims";
@@ -285,13 +294,18 @@ pub fn pressure_tests() -> Vec<PressureTest> {
             enforced_by: "watershed-distributary/tests/retry_budget.rs".to_owned(),
         },
         PressureTest {
+            name: RUN_IDS_USE_CANONICAL_CLAIMS.to_owned(),
+            claim: "run ids are derived from canonical file claims so equivalent authority spellings share identity".to_owned(),
+            enforced_by: "watershed-distributary/tests/run_id_identity.rs".to_owned(),
+        },
+        PressureTest {
             name: DAG_KERNEL_SERIAL_MERGE_SCAN.to_owned(),
             claim: "the DAG kernel performs one merge at a time by scanning topological order, while terminal failures do not block later mergeable tasks".to_owned(),
             enforced_by: "watershed-distributary/tests/dag_kernel.rs".to_owned(),
         },
         PressureTest {
             name: DAG_PLAN_CLAIMS_TRAVEL_TO_MERGE.to_owned(),
-            claim: "a typed DAG plan carries task file claims into the kernel merge action that authorizes settlement validation".to_owned(),
+            claim: "a typed DAG plan carries canonical task file claims into the kernel merge action that authorizes settlement validation".to_owned(),
             enforced_by: "watershed-distributary/tests/dag_plan.rs".to_owned(),
         },
         PressureTest {
@@ -301,7 +315,7 @@ pub fn pressure_tests() -> Vec<PressureTest> {
         },
         PressureTest {
             name: DAG_KERNEL_REJECTS_RAW_CLAIM_BYPASS.to_owned(),
-            claim: "raw DAG kernel construction requires file claims for every task and rejects independent overlapping write authority".to_owned(),
+            claim: "raw DAG kernel construction requires canonical file claims for every task and rejects independent overlapping write authority".to_owned(),
             enforced_by: "watershed-distributary/tests/dag_kernel.rs".to_owned(),
         },
         PressureTest {
