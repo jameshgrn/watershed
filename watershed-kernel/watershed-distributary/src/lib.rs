@@ -262,9 +262,20 @@ fn derive_deposit_id(run_id: &str, summary: &str, touched_files: &[PathBuf]) -> 
     format!("deposit:{digest:x}")
 }
 
-fn normalized_deposit_paths(mut touched_files: Vec<PathBuf>) -> Vec<PathBuf> {
+fn normalized_deposit_paths(touched_files: Vec<PathBuf>) -> Vec<PathBuf> {
+    let mut touched_files = touched_files
+        .into_iter()
+        .map(normalized_deposit_path)
+        .collect::<Vec<_>>();
     touched_files.sort();
     touched_files
+}
+
+fn normalized_deposit_path(path: PathBuf) -> PathBuf {
+    match FileClaim::normalize_path(&path) {
+        Ok(normalized) => PathBuf::from(normalized),
+        Err(_) => path,
+    }
 }
 
 fn validate_required_pressure_tests(required: &[String]) -> Result<(), ValidationError> {

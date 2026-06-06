@@ -336,7 +336,7 @@ pub fn pressure_tests() -> Vec<PressureTest> {
         },
         PressureTest {
             name: DEPOSIT_IDS_ARE_DERIVED.to_owned(),
-            claim: "authoritative Deposit ids are content-derived from the producing run id, summary, and sorted touched files".to_owned(),
+            claim: "authoritative Deposit ids are content-derived from the producing run id, summary, and canonical sorted touched files".to_owned(),
             enforced_by: "watershed-distributary/tests/worker_lifecycle.rs".to_owned(),
         },
         PressureTest {
