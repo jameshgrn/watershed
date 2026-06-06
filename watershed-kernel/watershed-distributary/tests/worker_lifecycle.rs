@@ -50,11 +50,11 @@ fn running_run_can_fail() {
 fn completed_runs_derive_stable_deposit_ids() {
     let first = dispatch(validated_plan()).start().complete(
         "synthetic deposit",
-        vec![PathBuf::from("b.rs"), PathBuf::from("a.rs")],
+        vec![PathBuf::from("./b.rs"), PathBuf::from("a.rs")],
     );
     let second = dispatch(validated_plan()).start().complete(
         "synthetic deposit",
-        vec![PathBuf::from("a.rs"), PathBuf::from("b.rs")],
+        vec![PathBuf::from("b.rs"), PathBuf::from("./a.rs")],
     );
     let (first_deposit, _first_claims) = collect(first);
     let (second_deposit, _second_claims) = collect(second);

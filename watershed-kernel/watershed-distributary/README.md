@@ -67,7 +67,7 @@ Legal run motion:
 - `mock_worker(Run<Running>) -> Run<Completed>` (test helper)
 - `collect(Run<Completed>) -> (Deposit, Vec<FileClaim>)`
 
-`Deposit` has no public constructor. A deposit is created only by the consuming `Run<Running>::complete(...)` transition, stored inside `Run<Completed>`, and released by `collect(...)` with the dispatch-time `FileClaim`s for downstream claims-integrity validation. Its `deposit:` id is content-derived from the producing run id, summary, and sorted touched files.
+`Deposit` has no public constructor. A deposit is created only by the consuming `Run<Running>::complete(...)` transition, stored inside `Run<Completed>`, and released by `collect(...)` with the dispatch-time `FileClaim`s for downstream claims-integrity validation. Its `deposit:` id is content-derived from the producing run id, summary, and canonical sorted touched files.
 
 The run carries `id`, `intent`, `claims`, `retried_from`, `retry_index`, and the validating policy's retry budget forward from dispatch through every state, so the completed-run deposit cites the run that produced it.
 
