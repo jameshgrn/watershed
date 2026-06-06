@@ -6,7 +6,6 @@ use watershed_distributary::dag::{
     TaskMergeOutcome, TaskReviewDone, TaskReviewOutcome, TaskWaitDone, TaskWaitOutcome,
 };
 use watershed_distributary::{collect, dispatch, mock_worker, Drafted, Plan};
-use watershed_tributary::{baseline, merge, validate, Validation};
 
 fn file_claim(path: &str) -> FileClaim {
     FileClaim {
@@ -233,7 +232,7 @@ fn dag_plan_compiles_claims_into_merge_actions() {
 }
 
 #[test]
-fn dag_dispatch_feeds_existing_plan_run_settlement_ceremony() {
+fn dag_dispatch_feeds_existing_plan_run_collection_ceremony() {
     let plan = DagPlan::new(vec![root_task()]).expect("DAG plan should be valid");
     let mut kernel = plan.compile_kernel().expect("kernel should compile");
 
@@ -268,7 +267,7 @@ fn dag_dispatch_feeds_existing_plan_run_settlement_ceremony() {
         .expect("policy should validate");
     let pending = dispatch(plan);
     let completed = mock_worker(pending.start());
-    let (deposit, _dispatch_claims) = collect(completed);
+    let (deposit, dispatch_claims) = collect(completed);
 
     kernel.handle(DagEvent::TaskDispatched(TaskDispatched {
         task_slug: "root".to_owned(),
@@ -282,15 +281,8 @@ fn dag_dispatch_feeds_existing_plan_run_settlement_ceremony() {
     let merge_actions = kernel.handle(task_review_passed("root"));
     let merge_claims = merge_claims(&merge_actions, "root");
 
-    let accepted = match validate(deposit, &merge_claims) {
-        Validation::Accepted(accepted) => accepted,
-        Validation::Rejected(rejected) => {
-            panic!("deposit was rejected: {}", rejected.reason());
-        }
-    };
-    let baseline = baseline(merge(accepted));
-
-    assert!(baseline.id().starts_with("baseline-merge-run:"));
+    assert_eq!(dispatch_claims, merge_claims);
+    assert_eq!(deposit.touched_files(), &[PathBuf::from("src/root.rs")]);
 
     let done_actions = kernel.handle(DagEvent::TaskMergeDone(TaskMergeDone {
         task_slug: "root".to_owned(),

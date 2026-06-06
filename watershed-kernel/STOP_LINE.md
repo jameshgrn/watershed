@@ -8,11 +8,11 @@ runner, service, CLI, database, pane manager, or policy engine.
 
 The kernel owns:
 
-- shared contracts for recovered intent, file claims, policy, deposits, pressure
-  tests, and generated schemas;
+- shared contracts for recovered intent, file claims, policy, pressure tests,
+  and generated schemas;
 - typed outbound motion from `Plan<Drafted>` through `Plan<Validated>`;
 - typed worker run motion from `Run<Pending>` through `Run<Completed>` or
-  `Run<Failed>`, including lawful retry;
+  `Run<Failed>`, including completed-run deposits and lawful retry;
 - a pure DAG event kernel for dependency-gated dispatch, pane-bound task motion,
   typed wait/review/merge outcomes, serial merge, and failure cascade;
 - inbound settlement states for validation, merge, and baseline anchoring; and

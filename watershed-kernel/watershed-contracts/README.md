@@ -8,11 +8,16 @@ This crate owns canonical data shared across the workspace.
 - `ClaimKind`: read-only, exclusive, or shared file authority.
 - `VerificationSpec`: declared checks for task success.
 - `RollbackSpec`: declared steps for reverting task work.
-- `Policy`: governance rules used to validate compiled plans.
-- `PressureTest`: named rule and deterministic test path that enforces it.
-- `Deposit`: typed worker output collected from completed runs.
+- `Policy`: governance rules used to validate compiled plans, including required pressure-test registry names.
+- `PressureTest`: named rule and deterministic test path that enforces it, whether the rule is compile-fail or runtime-enforced.
 - `ContractError`: shared error type for invalid contract data.
+
+The pressure-test registry is self-checked for trimmed non-empty unique names,
+trimmed non-empty claims, and enforcement paths that resolve to files inside the
+workspace.
 
 All public contract data derives `Serialize`, `Deserialize`, `JsonSchema`, `Debug`, and `Clone` where applicable.
 
-The schema emitter in `xtask` writes JSON Schema files for the public contract types into `schemas/`.
+The schema emitter in `xtask` writes JSON Schema files for public kernel record types across the workspace into `schemas/`.
+
+Top-level Python copies of these contracts are not authoritative; the Rust types in this crate are the source of truth.

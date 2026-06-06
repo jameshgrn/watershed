@@ -6,7 +6,7 @@ How `watershed/` gets populated from existing repos.
 
 | old | new | notes |
 |---|---|---|
-| `dgov/` | **`distributary/`** + **`tributary/`** | split: distributary owns plan trees + dispatch + worktrees + governor; tributary owns ingest + validate + merge + baseline (sentrux) |
+| `dgov/` | **`watershed-kernel/watershed-distributary/`** + **`watershed-kernel/watershed-tributary/`** for authority-bearing motion | split: Rust distributary owns legal fan-out; Rust tributary owns ingest validation, merge, and baseline authority. Any future Python/TS orchestration should wrap the kernel rather than duplicate the state machine. Do not force runner/worktree/persistence/prompt code into Rust. |
 | `quarry/` (existing) | **`quarry/`** (orchestration) + **`flume/`** (workshop) | split: connectors / transforms / ETL stay in quarry; strict-typed scientific operators (D8, Priority-Flood, flow accumulation) move to flume |
 | `topos/` | **`mosaic/`** | rename only, role unchanged |
 | `writing/` (scilint) | **`strata/`** | rename only, role unchanged |
@@ -19,8 +19,8 @@ How `watershed/` gets populated from existing repos.
 
 ## Order of operations
 
-1. **distributary first.** Split dgov: dispatch + plan + worktree code → distributary. Keep CLI alias `dgov` → `distributary` during transition.
-2. **tributary second.** Move dgov's ingest + validate + baseline + sentrux integration into tributary. Wire up the contract between distributary and tributary explicitly (typed `Deposit`, `Merge` records).
+1. **kernel distributary first.** Move dispatch/plan/run authority into `watershed-kernel/watershed-distributary/` when a Rust transition consumes it. Keep any Python/TS layer as orchestration only.
+2. **kernel tributary second.** Move ingest/validate/merge/baseline authority into `watershed-kernel/watershed-tributary/` when the law is consumed by the tributary ceremony. Wire up the handoff from distributary explicitly: completed runs emit typed `Deposit`; tributary validates it into `Validation`, `Merge`, and `Baseline` records.
 3. **flume.** Pull strict-typed scientific operators from existing `quarry/` — D8, Priority-Flood, flow accumulation, registry, pressure-tests. These become the workshop floor.
 4. **quarry.** What's left in original `quarry/` becomes the orchestration / connector / transform layer. Owns the untyped→typed boundary.
 5. **strata.** Move scilint from `writing/`. Brand copy ("Your manuscript is not ready") survives the rename.
@@ -32,7 +32,7 @@ How `watershed/` gets populated from existing repos.
 
 | module | strategy | reason |
 |---|---|---|
-| distributary, tributary | preserve via `git filter-repo` from dgov | active development; blame matters |
+| watershed-kernel distributary/tributary crates | preserve in watershed-kernel history | authority-bearing state machines live in Rust; Python package history should not become a second law |
 | quarry, flume | preserve from existing quarry; need to split history along directory boundaries | active; the split itself is interesting historically |
 | mosaic | squash from topos | less active, cleaner |
 | strata | preserve from writing/ | scilint has a story worth keeping |
@@ -43,7 +43,7 @@ How `watershed/` gets populated from existing repos.
 
 - `sentrux` integration — does it import `dgov` by name? If so, alias to `tributary` since that's where baselines live now.
 - `.mcp.json` — `qgis_mcp` and `firepass-mcp` paths point into `~/projects/`; check that none reference dgov or quarry by absolute path.
-- `sandfrom.space/dgov/` → `/distributary/` and `/tributary/` redirects.
+- `sandfrom.space/dgov/` → kernel-backed distributary/tributary documentation redirects once a public surface exists.
 - Bluefield / Hermes agent configs — any hardcoded `dgov` references.
 - `~/projects/CLAUDE.md` — update shorthand section once committed.
 - Any external docs / install instructions referencing `dgov`, `scilint`, or `topos` by name.
@@ -54,4 +54,4 @@ How `watershed/` gets populated from existing repos.
 
 ## Status
 
-This is a scaffold. No code has been moved. Module subdirectories contain only placeholder READMEs. Review the structure; when satisfied, the actual migration is a Maker-mode operation in your terminal — distributary can govern its own birth if we're feeling poetic.
+The top-level Python `distributary/` and `tributary/` package attempt was removed. Authority-bearing fan-out/fan-in work now lives in Rust under `watershed-kernel/`; future rim code should consume that substrate instead of reimplementing it. The migration rule is specific: move state-machine authority into Rust when the current kernel needs it, and leave orchestration above the kernel.

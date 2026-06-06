@@ -7,9 +7,11 @@ Personal research lab. Fluvial geomorphology + hydrology + remote sensing + dyna
 ```
 watershed/
 ├── bedrock/        # canonical data + policy + schemas — source of truth
-├── distributary/   # agent dispatch, plan trees, worktrees   (← dgov, fan-out half)
-├── tributary/      # ingest, validate, merge to main          (← dgov, fan-in half)
+├── watershed-kernel/
+│   ├── watershed-distributary/ # Rust lawful fan-out substrate
+│   └── watershed-tributary/    # Rust lawful fan-in substrate
 ├── quarry/         # data orchestration: connectors, transforms, ETL boundary
+├── rivulet/        # side-channel inference for Watermaster research/review
 ├── flume/          # strict-typed scientific workshop — only canonical types intake
 ├── outcrop/        # lit corpus — Zotero + arXiv + embeddings + cite
 ├── mosaic/         # viz consumer — globe, basemaps, satellite renders   (← topos)
@@ -25,13 +27,13 @@ The lab runs on two orchestration axes that look the same shape but have differe
 **Code/agent axis (vertical):**
 
 ```
-distributary  ──fan out──▶  agents work in worktrees
-                                       │
-                                  typed outputs
-                                       │
-tributary     ◀──fan in────────────────┘
-                                       │
-                                merge to main
+watershed-kernel/watershed-distributary  ──fan out──▶  lawful runs
+                                                            │
+                                                       typed deposits
+                                                            │
+watershed-kernel/watershed-tributary     ◀──fan in──────────┘
+                                                            │
+                                                     validation / merge
 ```
 
 **Data axis (horizontal):**
@@ -46,7 +48,7 @@ data         + connectors  workshop      consumers
 
 ## The narrative
 
-The substrate doesn't move. **Bedrock** holds what's true. **Distributary** fans out agents to do work; **tributary** brings their typed outputs back and merges them. **Quarry** transforms raw data from bedrock into the strict types **flume** consumes — flume is where the actual science runs with full type discipline. **Mosaic** and **strata** present flume's outputs as image and prose. **Outcrop** is the visible exposed face of accumulated literature — feeds into strata as citations, into flume as ground truth from prior work.
+The substrate doesn't move. **Bedrock** holds what's true. The Rust kernel's **watershed-distributary** crate fans out legal work; **watershed-tributary** brings typed deposits back through validation and merge. **Rivulet** is the Watermaster's small side-channel for cheap inference, research, and critique; it advises but does not author law or Deposits. **Quarry** transforms raw data from bedrock into the strict types **flume** consumes — flume is where the actual science runs with full type discipline. **Mosaic** and **strata** present flume's outputs as image and prose. **Outcrop** is the visible exposed face of accumulated literature — feeds into strata as citations, into flume as ground truth from prior work.
 
 ## Type discipline by module
 
@@ -54,14 +56,17 @@ The substrate doesn't move. **Bedrock** holds what's true. **Distributary** fans
 |---|---|
 | bedrock | schema-defined data, policy-aligned |
 | quarry | accepts untyped inputs from outside, emits typed outputs |
+| rivulet | advisory inference returns; read-only by default; no Deposits |
 | flume | refuses non-canonical inputs; everything in is strict-typed |
 | mosaic, strata | consume flume's typed outputs |
 | outcrop | typed `Reference` records |
-| distributary, tributary | typed `Run`, `Plan`, `Deposit`, `Merge` |
+| watershed-kernel/watershed-distributary, watershed-kernel/watershed-tributary | typed `Plan`, `Run`, completed-run `Deposit`, `Validation`, `Merge`, `Baseline` |
 
 ## Status
 
-**Scaffolding under review.** Each module directory holds a placeholder `README.md` describing its role, provenance (which existing repo absorbs into it), public types it will own, and current status. No code migrated yet.
+**Scaffolding plus Rust kernel.** The authority-bearing fan-out/fan-in substrate lives in `watershed-kernel/` as Rust crates. The remaining module directories are placeholders until their migration begins.
+
+Rust receives law when the law has a transition to live in: record identity, claim authority, sealed state movement, and crate-boundary construction rules. Runner orchestration, worktrees, persistence, CLI surfaces, prompts, event stores, and subprocess gates stay above the kernel until a typed rim layer needs them.
 
 When ready: see `MIGRATION.md`.
 

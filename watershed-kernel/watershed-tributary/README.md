@@ -2,6 +2,8 @@
 
 This crate owns inbound lawful settlement.
 
+It consumes `watershed_distributary::Deposit`; it does not create deposits.
+
 Legal settlement transitions:
 
 - `validate(Deposit, &[FileClaim]) -> Validation`
@@ -12,9 +14,11 @@ Validation enforces two structural invariants on every Deposit-against-Plan pair
 
 `Validation` is either `Accepted(AcceptedValidation)` or `Rejected(RejectedValidation)`.
 
-`AcceptedValidation`, `Merge`, and `Baseline` have crate-private constructors.
+`AcceptedValidation`, `Merge`, and `Baseline` have crate-private constructors and content-derived ids: `validation:`, `merge:`, and `baseline:` respectively.
 
 Outside crates can receive those states only through the legal settlement functions.
+
+This crate cannot create deposits.
 
 This crate cannot dispatch plans.
 

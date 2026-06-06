@@ -1,9 +1,12 @@
 pub mod dag;
 
+use schemars::JsonSchema;
+use serde::Serialize;
 use sha2::{Digest, Sha256};
+use std::collections::BTreeSet;
 use std::path::PathBuf;
 use thiserror::Error;
-use watershed_contracts::{ClaimKind, Deposit, FileClaim, Policy, RecoveredIntent};
+use watershed_contracts::{pressure_tests, ClaimKind, FileClaim, Policy, RecoveredIntent};
 
 mod sealed {
     pub trait Sealed {}
@@ -133,6 +136,8 @@ impl Plan<Compiled> {
             return Err(ValidationError::SharedClaimsForbidden);
         }
 
+        validate_required_pressure_tests(&policy.required_pressure_tests)?;
+
         Ok(Plan {
             state: Validated {
                 intent,
@@ -167,6 +172,8 @@ pub enum ValidationError {
     MissingClaims,
     #[error("policy forbids shared file claims")]
     SharedClaimsForbidden,
+    #[error("policy requires unknown pressure test '{name}'")]
+    UnknownPressureTest { name: String },
 }
 
 /// Errors raised while retrying a failed run.
@@ -176,6 +183,85 @@ pub enum RetryError {
         "retry budget exhausted: current retry index {current} reached policy max_retries {budget}"
     )]
     BudgetExhausted { current: u32, budget: u32 },
+}
+
+/// Typed output collected from a completed run.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
+pub struct Deposit {
+    id: String,
+    run_id: String,
+    summary: String,
+    touched_files: Vec<PathBuf>,
+}
+
+impl Deposit {
+    fn new(
+        run_id: impl Into<String>,
+        summary: impl Into<String>,
+        touched_files: Vec<PathBuf>,
+    ) -> Self {
+        let run_id = run_id.into();
+        let summary = summary.into();
+        let touched_files = normalized_deposit_paths(touched_files);
+        let id = derive_deposit_id(&run_id, &summary, &touched_files);
+
+        Self {
+            id,
+            run_id,
+            summary,
+            touched_files,
+        }
+    }
+
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+
+    pub fn run_id(&self) -> &str {
+        &self.run_id
+    }
+
+    pub fn summary(&self) -> &str {
+        &self.summary
+    }
+
+    pub fn touched_files(&self) -> &[PathBuf] {
+        &self.touched_files
+    }
+}
+
+fn derive_deposit_id(run_id: &str, summary: &str, touched_files: &[PathBuf]) -> String {
+    let payload = serde_json::json!({
+        "run_id": run_id,
+        "summary": summary,
+        "touched_files": touched_files,
+    });
+    let serialized =
+        serde_json::to_vec(&payload).expect("Deposit identity serialization should be infallible");
+    let mut hasher = Sha256::new();
+    hasher.update(b"deposit:");
+    hasher.update(serialized);
+    let digest = hasher.finalize();
+
+    format!("deposit:{digest:x}")
+}
+
+fn normalized_deposit_paths(mut touched_files: Vec<PathBuf>) -> Vec<PathBuf> {
+    touched_files.sort();
+    touched_files
+}
+
+fn validate_required_pressure_tests(required: &[String]) -> Result<(), ValidationError> {
+    let registered = pressure_tests()
+        .into_iter()
+        .map(|test| test.name)
+        .collect::<BTreeSet<_>>();
+
+    if let Some(name) = required.iter().find(|name| !registered.contains(*name)) {
+        return Err(ValidationError::UnknownPressureTest { name: name.clone() });
+    }
+
+    Ok(())
 }
 
 /// Marker trait for legal run states.
@@ -288,11 +374,7 @@ impl Run<Running> {
             max_retries,
             ..
         } = self;
-        let deposit = Deposit {
-            run_id: id.clone(),
-            summary: summary.into(),
-            touched_files,
-        };
+        let deposit = Deposit::new(id.clone(), summary, touched_files);
 
         Run {
             id,

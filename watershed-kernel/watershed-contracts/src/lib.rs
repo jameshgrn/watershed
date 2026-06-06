@@ -96,20 +96,12 @@ pub struct Policy {
     pub required_pressure_tests: Vec<String>,
 }
 
-/// A named compile-time invariant and the test that enforces it.
+/// A named invariant and the deterministic test that enforces it.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PressureTest {
     pub name: String,
     pub claim: String,
     pub enforced_by: String,
-}
-
-/// Typed output collected from a completed run.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct Deposit {
-    pub run_id: String,
-    pub summary: String,
-    pub touched_files: Vec<PathBuf>,
 }
 
 /// Errors raised while handling shared contract data.
@@ -152,11 +144,16 @@ pub const RETRY_RESPECTS_MAX_RETRIES: &str = "retry_respects_max_retries";
 pub const DAG_KERNEL_SERIAL_MERGE_SCAN: &str = "dag_kernel_serial_merge_scan";
 pub const DAG_PLAN_CLAIMS_TRAVEL_TO_MERGE: &str = "dag_plan_claims_travel_to_merge";
 pub const DAG_PLAN_REJECTS_CONFLICTING_CLAIMS: &str = "dag_plan_rejects_conflicting_claims";
+pub const DAG_KERNEL_REJECTS_RAW_CLAIM_BYPASS: &str = "dag_kernel_rejects_raw_claim_bypass";
 pub const WAIT_DONE_REJECTS_KERNEL_TASK_STATE: &str = "wait_done_rejects_kernel_task_state";
 pub const DAG_KERNEL_BINDS_TASK_PANES: &str = "dag_kernel_binds_task_panes";
 pub const TASK_STATE_REJECTS_DEAD_VARIANTS: &str = "task_state_rejects_dead_variants";
 pub const REVIEW_DONE_REJECTS_BOOLEAN_VERDICT_BAG: &str = "review_done_rejects_boolean_verdict_bag";
 pub const MERGE_DONE_REJECTS_OPTIONAL_ERROR: &str = "merge_done_rejects_optional_error";
+pub const CONSTRUCT_DEPOSIT_DIRECTLY: &str = "construct_deposit_directly";
+pub const DEPOSIT_IDS_ARE_DERIVED: &str = "deposit_ids_are_derived";
+pub const REQUIRED_PRESSURE_TESTS_ARE_REGISTERED: &str = "required_pressure_tests_are_registered";
+pub const PRESSURE_TEST_REGISTRY_SELF_CONSISTENT: &str = "pressure_test_registry_self_consistent";
 
 pub fn pressure_tests() -> Vec<PressureTest> {
     vec![
@@ -246,6 +243,11 @@ pub fn pressure_tests() -> Vec<PressureTest> {
             enforced_by: "watershed-distributary/tests/dag_plan.rs".to_owned(),
         },
         PressureTest {
+            name: DAG_KERNEL_REJECTS_RAW_CLAIM_BYPASS.to_owned(),
+            claim: "raw DAG kernel construction requires file claims for every task and rejects independent overlapping write authority".to_owned(),
+            enforced_by: "watershed-distributary/tests/dag_kernel.rs".to_owned(),
+        },
+        PressureTest {
             name: WAIT_DONE_REJECTS_KERNEL_TASK_STATE.to_owned(),
             claim: "worker wait completion events accept only worker outcomes, not internal kernel task states".to_owned(),
             enforced_by: "tests/compile_fail/wait_done_rejects_kernel_task_state.rs".to_owned(),
@@ -270,13 +272,34 @@ pub fn pressure_tests() -> Vec<PressureTest> {
             claim: "merge completion events use a typed merge outcome instead of an optional error field".to_owned(),
             enforced_by: "tests/compile_fail/merge_done_rejects_optional_error.rs".to_owned(),
         },
+        PressureTest {
+            name: CONSTRUCT_DEPOSIT_DIRECTLY.to_owned(),
+            claim: "only watershed-distributary completed runs can construct authoritative Deposit records".to_owned(),
+            enforced_by: "tests/compile_fail/construct_deposit_directly.rs".to_owned(),
+        },
+        PressureTest {
+            name: DEPOSIT_IDS_ARE_DERIVED.to_owned(),
+            claim: "authoritative Deposit ids are content-derived from the producing run id, summary, and sorted touched files".to_owned(),
+            enforced_by: "watershed-distributary/tests/worker_lifecycle.rs".to_owned(),
+        },
+        PressureTest {
+            name: REQUIRED_PRESSURE_TESTS_ARE_REGISTERED.to_owned(),
+            claim: "compiled plan validation rejects policy-required pressure test names that are not registered".to_owned(),
+            enforced_by: "watershed-distributary/tests/policy_pressure_tests.rs".to_owned(),
+        },
+        PressureTest {
+            name: PRESSURE_TEST_REGISTRY_SELF_CONSISTENT.to_owned(),
+            claim: "pressure-test registry names, claims, and enforcement paths are non-empty, unique, and resolvable".to_owned(),
+            enforced_by: "watershed-contracts/src/lib.rs".to_owned(),
+        },
     ]
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{ClaimKind, FileClaim};
-    use std::path::PathBuf;
+    use super::{pressure_tests, ClaimKind, FileClaim};
+    use std::collections::BTreeSet;
+    use std::path::{Path, PathBuf};
 
     fn claim(path: &str, kind: ClaimKind) -> FileClaim {
         FileClaim {
@@ -318,5 +341,79 @@ mod tests {
         assert!(!exclusive_dir.conflicts_with(&read_only_file));
         assert!(!shared_a.conflicts_with(&shared_b));
         assert!(shared_a.conflicts_with(&exclusive_file));
+    }
+
+    #[test]
+    fn pressure_test_registry_is_self_consistent() {
+        let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .expect("contracts crate should live under workspace root")
+            .canonicalize()
+            .expect("workspace root should resolve");
+        let mut names = BTreeSet::new();
+
+        for pressure_test in pressure_tests() {
+            let trimmed_name = pressure_test.name.trim();
+            assert!(
+                !trimmed_name.is_empty(),
+                "pressure test name must be non-empty"
+            );
+            assert_eq!(
+                pressure_test.name, trimmed_name,
+                "pressure test name '{}' must not have leading or trailing whitespace",
+                pressure_test.name
+            );
+            assert!(
+                names.insert(trimmed_name.to_owned()),
+                "duplicate pressure test name '{}'",
+                pressure_test.name
+            );
+            assert!(
+                !pressure_test.claim.trim().is_empty(),
+                "pressure test '{}' must have a non-empty claim",
+                pressure_test.name
+            );
+
+            let enforcement_paths = pressure_test
+                .enforced_by
+                .split(';')
+                .map(str::trim)
+                .collect::<Vec<_>>();
+            assert!(
+                !enforcement_paths.is_empty(),
+                "pressure test '{}' must name at least one enforcement path",
+                pressure_test.name
+            );
+
+            for path in enforcement_paths {
+                assert!(
+                    !path.is_empty(),
+                    "pressure test '{}' has an empty enforcement path",
+                    pressure_test.name
+                );
+                let resolved_path =
+                    workspace_root
+                        .join(path)
+                        .canonicalize()
+                        .unwrap_or_else(|err| {
+                            panic!(
+                                "pressure test '{}' enforcement path '{}' does not resolve: {err}",
+                                pressure_test.name, path
+                            )
+                        });
+                assert!(
+                    resolved_path.starts_with(&workspace_root),
+                    "pressure test '{}' enforcement path '{}' resolves outside the workspace",
+                    pressure_test.name,
+                    path
+                );
+                assert!(
+                    resolved_path.is_file(),
+                    "pressure test '{}' enforcement path '{}' does not resolve to a file",
+                    pressure_test.name,
+                    path
+                );
+            }
+        }
     }
 }
