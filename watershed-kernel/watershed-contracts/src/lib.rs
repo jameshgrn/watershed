@@ -1,6 +1,6 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use thiserror::Error;
 
 /// Structured intent recovered before claims or dispatch can exist.
@@ -32,26 +32,46 @@ pub struct FileClaim {
 }
 
 impl FileClaim {
+    /// Returns the canonical authority path form for a claim or touched file path.
+    pub fn normalize_path(path: impl AsRef<Path>) -> Result<String, FileClaimPathError> {
+        normalize_claim_path(path.as_ref())
+    }
+
     /// Returns the path form used when comparing claim authority.
-    pub fn normalized_path(&self) -> String {
+    pub fn normalized_path(&self) -> Result<String, FileClaimPathError> {
         normalize_claim_path(&self.path)
     }
 
+    /// Returns an error if this claim cannot carry legal path authority.
+    pub fn validate_path(&self) -> Result<(), FileClaimPathError> {
+        self.normalized_path().map(|_| ())
+    }
+
     /// Returns whether this claim's path authority covers `path`.
-    pub fn covers_path(&self, path: impl AsRef<Path>) -> bool {
-        path_covers(
-            &self.normalized_path(),
-            &normalize_claim_path(path.as_ref()),
-        )
+    pub fn covers_path(&self, path: impl AsRef<Path>) -> Result<bool, FileClaimPathError> {
+        Ok(path_covers(
+            &self.normalized_path()?,
+            &normalize_claim_path(path.as_ref())?,
+        ))
     }
 
     /// Returns whether this claim grants write authority for `path`.
-    pub fn grants_write_to(&self, path: impl AsRef<Path>) -> bool {
-        !matches!(self.kind, ClaimKind::ReadOnly) && self.covers_path(path)
+    pub fn grants_write_to(&self, path: impl AsRef<Path>) -> Result<bool, FileClaimPathError> {
+        let claim_path = self.normalized_path()?;
+        let target_path = normalize_claim_path(path.as_ref())?;
+
+        if matches!(self.kind, ClaimKind::ReadOnly) {
+            return Ok(false);
+        }
+
+        Ok(path_covers(&claim_path, &target_path))
     }
 
     /// Returns whether this claim and `other` cannot legally run independently.
-    pub fn conflicts_with(&self, other: &FileClaim) -> bool {
+    pub fn conflicts_with(&self, other: &FileClaim) -> Result<bool, FileClaimPathError> {
+        let left_path = self.normalized_path()?;
+        let right_path = other.normalized_path()?;
+
         if matches!(self.kind, ClaimKind::ReadOnly)
             || matches!(other.kind, ClaimKind::ReadOnly)
             || matches!(
@@ -59,11 +79,10 @@ impl FileClaim {
                 (ClaimKind::Shared, ClaimKind::Shared)
             )
         {
-            return false;
+            return Ok(false);
         }
 
-        path_covers(&self.normalized_path(), &other.normalized_path())
-            || path_covers(&other.normalized_path(), &self.normalized_path())
+        Ok(path_covers(&left_path, &right_path) || path_covers(&right_path, &left_path))
     }
 }
 
@@ -111,12 +130,49 @@ pub enum ContractError {
     InvalidData { reason: String },
 }
 
-fn normalize_claim_path(path: &Path) -> String {
-    path.to_string_lossy()
-        .trim()
-        .trim_start_matches("./")
-        .trim_end_matches('/')
-        .to_owned()
+/// Errors raised when a file claim path cannot carry legal authority.
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum FileClaimPathError {
+    #[error("path is empty or current-directory only")]
+    Empty,
+    #[error("path must be relative: {path}")]
+    Absolute { path: String },
+    #[error("path must not contain parent traversal: {path}")]
+    ParentTraversal { path: String },
+    #[error("path contains a non-Unicode component: {path}")]
+    NonUnicode { path: String },
+}
+
+fn normalize_claim_path(path: &Path) -> Result<String, FileClaimPathError> {
+    let original = path.display().to_string();
+    let mut parts = Vec::new();
+
+    for component in path.components() {
+        match component {
+            Component::Prefix(_) | Component::RootDir => {
+                return Err(FileClaimPathError::Absolute { path: original });
+            }
+            Component::ParentDir => {
+                return Err(FileClaimPathError::ParentTraversal { path: original });
+            }
+            Component::CurDir => {}
+            Component::Normal(part) => {
+                let Some(part) = part.to_str() else {
+                    return Err(FileClaimPathError::NonUnicode { path: original });
+                };
+                if part.trim().is_empty() {
+                    return Err(FileClaimPathError::Empty);
+                }
+                parts.push(part.to_owned());
+            }
+        }
+    }
+
+    if parts.is_empty() {
+        return Err(FileClaimPathError::Empty);
+    }
+
+    Ok(parts.join("/"))
 }
 
 fn path_covers(claim_path: &str, path: &str) -> bool {
@@ -154,6 +210,7 @@ pub const CONSTRUCT_DEPOSIT_DIRECTLY: &str = "construct_deposit_directly";
 pub const DEPOSIT_IDS_ARE_DERIVED: &str = "deposit_ids_are_derived";
 pub const REQUIRED_PRESSURE_TESTS_ARE_REGISTERED: &str = "required_pressure_tests_are_registered";
 pub const PRESSURE_TEST_REGISTRY_SELF_CONSISTENT: &str = "pressure_test_registry_self_consistent";
+pub const FILE_CLAIM_PATHS_REJECT_ESCAPE_FORMS: &str = "file_claim_paths_reject_escape_forms";
 
 pub fn pressure_tests() -> Vec<PressureTest> {
     vec![
@@ -292,12 +349,17 @@ pub fn pressure_tests() -> Vec<PressureTest> {
             claim: "pressure-test registry names, claims, and enforcement paths are non-empty, unique, and resolvable".to_owned(),
             enforced_by: "watershed-contracts/src/lib.rs".to_owned(),
         },
+        PressureTest {
+            name: FILE_CLAIM_PATHS_REJECT_ESCAPE_FORMS.to_owned(),
+            claim: "file-claim authority paths reject empty paths, absolute paths, parent traversal, and non-authority current-directory forms before authorizing writes".to_owned(),
+            enforced_by: "watershed-contracts/src/lib.rs;watershed-distributary/tests/dag_plan.rs;watershed-tributary/tests/claims_integrity.rs".to_owned(),
+        },
     ]
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{pressure_tests, ClaimKind, FileClaim};
+    use super::{pressure_tests, ClaimKind, FileClaim, FileClaimPathError};
     use std::collections::BTreeSet;
     use std::path::{Path, PathBuf};
 
@@ -312,11 +374,20 @@ mod tests {
     fn claim_covers_exact_path_and_descendants_only() {
         let claim = claim("./src/", ClaimKind::Exclusive);
 
-        assert_eq!(claim.normalized_path(), "src");
-        assert!(claim.covers_path("src"));
-        assert!(claim.covers_path("src/lib.rs"));
-        assert!(!claim.covers_path("srcibling/lib.rs"));
-        assert!(!claim.covers_path("src2/lib.rs"));
+        assert_eq!(
+            claim.normalized_path().expect("path should normalize"),
+            "src"
+        );
+        assert!(claim.covers_path("src").expect("path should normalize"));
+        assert!(claim
+            .covers_path("src/lib.rs")
+            .expect("path should normalize"));
+        assert!(!claim
+            .covers_path("srcibling/lib.rs")
+            .expect("path should normalize"));
+        assert!(!claim
+            .covers_path("src2/lib.rs")
+            .expect("path should normalize"));
     }
 
     #[test]
@@ -324,9 +395,15 @@ mod tests {
         let read_only = claim("src", ClaimKind::ReadOnly);
         let exclusive = claim("src", ClaimKind::Exclusive);
 
-        assert!(read_only.covers_path("src/lib.rs"));
-        assert!(!read_only.grants_write_to("src/lib.rs"));
-        assert!(exclusive.grants_write_to("src/lib.rs"));
+        assert!(read_only
+            .covers_path("src/lib.rs")
+            .expect("path should normalize"));
+        assert!(!read_only
+            .grants_write_to("src/lib.rs")
+            .expect("path should normalize"));
+        assert!(exclusive
+            .grants_write_to("src/lib.rs")
+            .expect("path should normalize"));
     }
 
     #[test]
@@ -337,10 +414,54 @@ mod tests {
         let shared_a = claim("src/lib.rs", ClaimKind::Shared);
         let shared_b = claim("./src/lib.rs", ClaimKind::Shared);
 
-        assert!(exclusive_dir.conflicts_with(&exclusive_file));
-        assert!(!exclusive_dir.conflicts_with(&read_only_file));
-        assert!(!shared_a.conflicts_with(&shared_b));
-        assert!(shared_a.conflicts_with(&exclusive_file));
+        assert!(exclusive_dir
+            .conflicts_with(&exclusive_file)
+            .expect("paths should normalize"));
+        assert!(!exclusive_dir
+            .conflicts_with(&read_only_file)
+            .expect("paths should normalize"));
+        assert!(!shared_a
+            .conflicts_with(&shared_b)
+            .expect("paths should normalize"));
+        assert!(shared_a
+            .conflicts_with(&exclusive_file)
+            .expect("paths should normalize"));
+    }
+
+    #[test]
+    fn file_claim_paths_reject_escape_forms() {
+        assert!(matches!(
+            FileClaim::normalize_path(" "),
+            Err(FileClaimPathError::Empty)
+        ));
+        assert!(matches!(
+            FileClaim::normalize_path("."),
+            Err(FileClaimPathError::Empty)
+        ));
+        assert!(matches!(
+            FileClaim::normalize_path("/tmp/outside.rs"),
+            Err(FileClaimPathError::Absolute { .. })
+        ));
+        assert!(matches!(
+            FileClaim::normalize_path("src/../outside.rs"),
+            Err(FileClaimPathError::ParentTraversal { .. })
+        ));
+
+        assert_eq!(
+            FileClaim::normalize_path("./src//lib.rs").expect("path should normalize"),
+            "src/lib.rs"
+        );
+    }
+
+    #[test]
+    fn authority_checks_validate_paths_before_kind_shortcuts() {
+        let invalid_read_only = claim("../outside.rs", ClaimKind::ReadOnly);
+        let exclusive = claim("src/lib.rs", ClaimKind::Exclusive);
+        let valid_read_only = claim("src/lib.rs", ClaimKind::ReadOnly);
+
+        assert!(invalid_read_only.grants_write_to("src/lib.rs").is_err());
+        assert!(invalid_read_only.conflicts_with(&exclusive).is_err());
+        assert!(valid_read_only.grants_write_to("../outside.rs").is_err());
     }
 
     #[test]

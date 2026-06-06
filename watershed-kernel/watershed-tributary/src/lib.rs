@@ -124,10 +124,23 @@ pub fn validate(deposit: Deposit, claims: &[FileClaim]) -> Validation {
         ));
     }
 
+    if let Some((invalid_path, source)) = deposit.touched_files().iter().find_map(|touched_path| {
+        FileClaim::normalize_path(touched_path)
+            .err()
+            .map(|source| (touched_path, source))
+    }) {
+        let reason = format!(
+            "deposit touched invalid file path '{}': {source}",
+            invalid_path.display()
+        );
+
+        return Validation::Rejected(RejectedValidation::new(deposit, reason));
+    }
+
     if let Some(unclaimed_path) = deposit.touched_files().iter().find(|touched_path| {
         !claims
             .iter()
-            .any(|claim| claim.grants_write_to(touched_path.as_path()))
+            .any(|claim| matches!(claim.grants_write_to(touched_path.as_path()), Ok(true)))
     }) {
         let reason = format!(
             "deposit touched file without write authority '{}'",

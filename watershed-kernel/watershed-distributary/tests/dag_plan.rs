@@ -5,7 +5,7 @@ use watershed_distributary::dag::{
     DagAction, DagError, DagEvent, DagPlan, DagTask, TaskDispatched, TaskMergeDone,
     TaskMergeOutcome, TaskReviewDone, TaskReviewOutcome, TaskWaitDone, TaskWaitOutcome,
 };
-use watershed_distributary::{collect, dispatch, mock_worker, Drafted, Plan};
+use watershed_distributary::{collect, dispatch, mock_worker, CompileError, Drafted, Plan};
 
 fn file_claim(path: &str) -> FileClaim {
     FileClaim {
@@ -85,8 +85,44 @@ fn dag_task_rejects_empty_claim_paths() {
 
     assert!(matches!(
         err,
-        DagError::EmptyClaimPath { task } if task == "empty-claim"
+        DagError::InvalidClaimPath { task, .. } if task == "empty-claim"
     ));
+}
+
+#[test]
+fn dag_task_rejects_escape_claim_paths() {
+    let absolute = DagTask::new("absolute", Vec::new(), vec![file_claim("/tmp/outside.rs")])
+        .expect_err("absolute claim paths should be rejected");
+    assert!(matches!(
+        absolute,
+        DagError::InvalidClaimPath { task, .. } if task == "absolute"
+    ));
+
+    let parent = DagTask::new("parent", Vec::new(), vec![file_claim("src/../outside.rs")])
+        .expect_err("parent traversal should be rejected");
+    assert!(matches!(
+        parent,
+        DagError::InvalidClaimPath { task, .. } if task == "parent"
+    ));
+}
+
+#[test]
+fn plan_compile_rejects_escape_claim_paths() {
+    let intent = RecoveredIntent {
+        goal: "reject path escapes".to_owned(),
+        scope: vec!["claims".to_owned()],
+        constraints: Vec::new(),
+        non_goals: Vec::new(),
+    };
+    let claims = vec![file_claim("../outside.rs")];
+
+    let err = Plan::<Drafted>::draft()
+        .recover_intent(intent)
+        .declare_claims(claims)
+        .compile()
+        .expect_err("claim path escapes should not compile");
+
+    assert!(matches!(err, CompileError::InvalidClaimPath { .. }));
 }
 
 #[test]
