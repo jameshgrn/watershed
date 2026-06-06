@@ -12,9 +12,10 @@ work moves through the lab.
 
 - `CANON.md` is the constitutional source: sixteen articles, the Watermaster's
   vow, lineage requirements, and typed surfaces.
-- `CLAUDE.md` is the Watermaster entry document: read canon, lineage,
-  `SKETCHES.md`, `sketches/THINKING.md`, and every SOP before beginning work.
-- `sops/` holds 19 live operating documents for intent compilation, plan,
+- `AGENTS.md` and `CLAUDE.md` are byte-identical Watermaster entry documents:
+  read canon, lineage, `SKETCHES.md`, `sketches/THINKING.md`, and every SOP
+  before beginning work.
+- `sops/` holds 20 live operating documents for intent compilation, plan,
   dispatch-run, deposit, validation, merge, baseline, data-contract, truth
   source, event, preflight, and passage discipline.
 - `sketches/lineage/` is the Watermaster succession chain. Each Watermaster
