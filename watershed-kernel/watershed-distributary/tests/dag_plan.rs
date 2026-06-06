@@ -79,6 +79,33 @@ fn dag_task_rejects_missing_claims() {
 }
 
 #[test]
+fn dag_task_rejects_padded_task_slugs() {
+    let err = DagTask::new(" root ", Vec::new(), vec![file_claim("src/root.rs")])
+        .expect_err("padded task slugs should be rejected");
+
+    assert!(matches!(
+        err,
+        DagError::PaddedTaskSlug { task } if task == " root "
+    ));
+}
+
+#[test]
+fn dag_task_rejects_padded_dependency_slugs() {
+    let err = DagTask::new(
+        "downstream",
+        vec![" root".to_owned()],
+        vec![file_claim("src/downstream.rs")],
+    )
+    .expect_err("padded dependency slugs should be rejected");
+
+    assert!(matches!(
+        err,
+        DagError::PaddedDependencySlug { task, dependency }
+            if task == "downstream" && dependency == " root"
+    ));
+}
+
+#[test]
 fn dag_task_rejects_empty_claim_paths() {
     let err = DagTask::new("empty-claim", Vec::new(), vec![file_claim(" ")])
         .expect_err("empty claim paths should be rejected");

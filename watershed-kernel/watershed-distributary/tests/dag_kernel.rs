@@ -238,6 +238,30 @@ fn raw_kernel_definition_rejects_empty_task_identity() {
         empty_dependency,
         DagError::EmptyDependency { task } if task == "a"
     ));
+
+    let padded_task = DagKernel::new(
+        dep_map([(" a ", &[])]),
+        BTreeMap::from([(" a ".to_owned(), vec![file_claim("src/a.rs")])]),
+    )
+    .expect_err("padded task slugs should be rejected");
+    assert!(matches!(
+        padded_task,
+        DagError::PaddedTaskSlug { task } if task == " a "
+    ));
+
+    let padded_dependency = DagKernel::new(
+        dep_map([("a", &[" b "]), ("b", &[])]),
+        BTreeMap::from([
+            ("a".to_owned(), vec![file_claim("src/a.rs")]),
+            ("b".to_owned(), vec![file_claim("src/b.rs")]),
+        ]),
+    )
+    .expect_err("padded dependency slugs should be rejected");
+    assert!(matches!(
+        padded_dependency,
+        DagError::PaddedDependencySlug { task, dependency }
+            if task == "a" && dependency == " b "
+    ));
 }
 
 #[test]

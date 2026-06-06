@@ -206,6 +206,7 @@ pub const RETRY_COMPLETED_RUN: &str = "retry_completed_run";
 pub const RETRY_LINEAGE_FROM_FAILED: &str = "retry_lineage_from_failed";
 pub const RETRY_RESPECTS_MAX_RETRIES: &str = "retry_respects_max_retries";
 pub const RUN_IDS_USE_CANONICAL_CLAIMS: &str = "run_ids_use_canonical_claims";
+pub const DAG_TASK_SLUGS_REJECT_PADDING: &str = "dag_task_slugs_reject_padding";
 pub const DAG_KERNEL_SERIAL_MERGE_SCAN: &str = "dag_kernel_serial_merge_scan";
 pub const DAG_PLAN_CLAIMS_TRAVEL_TO_MERGE: &str = "dag_plan_claims_travel_to_merge";
 pub const DAG_PLAN_REJECTS_CONFLICTING_CLAIMS: &str = "dag_plan_rejects_conflicting_claims";
@@ -297,6 +298,11 @@ pub fn pressure_tests() -> Vec<PressureTest> {
             name: RUN_IDS_USE_CANONICAL_CLAIMS.to_owned(),
             claim: "run ids are derived from canonical file claims so equivalent authority spellings share identity".to_owned(),
             enforced_by: "watershed-distributary/tests/run_id_identity.rs".to_owned(),
+        },
+        PressureTest {
+            name: DAG_TASK_SLUGS_REJECT_PADDING.to_owned(),
+            claim: "DAG task and dependency slugs reject leading and trailing whitespace in typed plans and raw kernel definitions".to_owned(),
+            enforced_by: "watershed-distributary/tests/dag_plan.rs;watershed-distributary/tests/dag_kernel.rs".to_owned(),
         },
         PressureTest {
             name: DAG_KERNEL_SERIAL_MERGE_SCAN.to_owned(),
