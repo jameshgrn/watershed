@@ -545,6 +545,9 @@ impl DagKernel {
         if self.task_states.get(&event.task_slug) != Some(&TaskState::Pending) {
             return Vec::new();
         }
+        if event.pane_slug.trim().is_empty() || has_padding(&event.pane_slug) {
+            return Vec::new();
+        }
 
         self.task_panes
             .insert(event.task_slug.clone(), event.pane_slug);

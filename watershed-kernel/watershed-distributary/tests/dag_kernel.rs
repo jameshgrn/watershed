@@ -417,6 +417,30 @@ fn single_task_happy_path_finishes_the_dag() {
 }
 
 #[test]
+fn dispatched_event_rejects_malformed_pane_slug() {
+    for malformed in ["", " p-a ", "\tp-a"] {
+        let mut kernel = kernel([("a", &[])]);
+        kernel.start();
+        let actions = kernel.handle(dispatched("a", malformed));
+
+        assert_eq!(kernel.task_state("a"), Some(TaskState::Pending));
+        assert!(kernel.snapshot().task_panes.get("a").is_none());
+        assert!(actions.is_empty());
+    }
+
+    let mut kernel = kernel([("a", &[])]);
+    kernel.start();
+    let actions = kernel.handle(dispatched("a", "p-a"));
+
+    assert_eq!(kernel.task_state("a"), Some(TaskState::Active));
+    assert_eq!(
+        kernel.snapshot().task_panes.get("a").map(String::as_str),
+        Some("p-a")
+    );
+    assert!(actions.is_empty());
+}
+
+#[test]
 fn wait_done_must_match_dispatched_pane() {
     let mut kernel = kernel([("a", &[])]);
     kernel.start();

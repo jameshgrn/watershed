@@ -19,6 +19,7 @@ The DAG kernel enforces:
 - independent file-claim conflict rejection,
 - serial topological merge,
 - pane identity binding from dispatch through review and merge,
+- dispatch validation of malformed pane identity (empty or padded pane slugs are ignored),
 - typed worker wait, review, and merge outcomes at the effect boundary,
 - scan-based merge after terminal failures,
 - failure cascade to pending dependents,

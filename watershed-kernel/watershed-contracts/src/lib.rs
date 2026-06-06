@@ -213,6 +213,8 @@ pub const DAG_PLAN_REJECTS_CONFLICTING_CLAIMS: &str = "dag_plan_rejects_conflict
 pub const DAG_KERNEL_REJECTS_RAW_CLAIM_BYPASS: &str = "dag_kernel_rejects_raw_claim_bypass";
 pub const WAIT_DONE_REJECTS_KERNEL_TASK_STATE: &str = "wait_done_rejects_kernel_task_state";
 pub const DAG_KERNEL_BINDS_TASK_PANES: &str = "dag_kernel_binds_task_panes";
+pub const TASK_DISPATCH_REJECTS_MALFORMED_PANE_SLUG: &str =
+    "task_dispatch_rejects_malformed_pane_slug";
 pub const TASK_STATE_REJECTS_DEAD_VARIANTS: &str = "task_state_rejects_dead_variants";
 pub const REVIEW_DONE_REJECTS_BOOLEAN_VERDICT_BAG: &str = "review_done_rejects_boolean_verdict_bag";
 pub const MERGE_DONE_REJECTS_OPTIONAL_ERROR: &str = "merge_done_rejects_optional_error";
@@ -332,6 +334,11 @@ pub fn pressure_tests() -> Vec<PressureTest> {
         PressureTest {
             name: DAG_KERNEL_BINDS_TASK_PANES.to_owned(),
             claim: "the DAG kernel binds task pane identity at dispatch, rejects wait completion from mismatched panes, and carries the bound pane into review interrupts and merge actions".to_owned(),
+            enforced_by: "watershed-distributary/tests/dag_kernel.rs".to_owned(),
+        },
+        PressureTest {
+            name: TASK_DISPATCH_REJECTS_MALFORMED_PANE_SLUG.to_owned(),
+            claim: "dispatch events with empty or padded pane slugs are rejected and do not bind task pane state".to_owned(),
             enforced_by: "watershed-distributary/tests/dag_kernel.rs".to_owned(),
         },
         PressureTest {

@@ -48,6 +48,8 @@ dag_kernel_serial_merge_scan is enforced by `watershed-distributary/tests/dag_ke
 
 dag_kernel_binds_task_panes is enforced by `watershed-distributary/tests/dag_kernel.rs`. The rule is that the DAG kernel binds task pane identity when dispatch is acknowledged, rejects worker wait completion from any other pane, and carries the bound pane into review interrupts and merge actions.
 
+task_dispatch_rejects_malformed_pane_slug is enforced by `watershed-distributary/tests/dag_kernel.rs`. The rule is that `TaskDispatched` events with empty or padded pane slugs are ignored: they do not bind task pane state and do not advance task state.
+
 dag_plan_claims_travel_to_merge is enforced by `watershed-distributary/tests/dag_plan.rs`. The rule is that `DagPlan` is the typed declaration layer before kernel state: it rejects claimless tasks, empty claim paths, duplicate task slugs, unknown dependencies, and dependency cycles; preserves deterministic topological order; and carries canonical task `FileClaim`s into the `MergeTask` action used by settlement validation. This is the first bridge from DAG dispatch to the existing `Plan -> Run -> Deposit -> Validation -> Merge -> Baseline` ceremony without adding workers, worktrees, persistence, or a CLI.
 
 dag_plan_rejects_conflicting_claims is enforced by `watershed-distributary/tests/dag_plan.rs`. The rule is that independent DAG tasks cannot both hold overlapping write authority over the same file or directory unless the overlapping claims are explicitly `Shared`. This is the Rust expression of dgov's file-claim conflict law: parallel motion is only legal when authority does not collide, while dependent overlap remains legal because the DAG serializes it.

@@ -1,10 +1,11 @@
 # dgov -> watershed port map
 
 Status: working port map, not a spec.
-Prepared: 2026-05-28. Revised: 2026-06-05 after the Rust-authority pivot.
+Prepared: 2026-05-28. Revised: 2026-06-06 after Bedload's Rust-boundary audit.
 Lineage: Source asked whether the first step is raiding dgov for the improved
 distributary and tributary; later clarified that watershed should move law into
-Rust as the work allows, not by force.
+Rust as the work allows, not by force. Bedload audited the dgov/watershed
+contract boundary on 2026-06-06.
 
 ## Purpose
 
@@ -50,6 +51,89 @@ Rust. The authority-bearing fan-out/fan-in substrate lives under
 Old sketch language that says `dgov/kernel.py` lifts to `distributary.kernel` is
 stale. The Python file remains valuable history, but the canonical law is the
 Rust kernel.
+
+## 2026-06-06 Boundary Audit
+
+The dgov Python governor and the watershed Rust kernel are different systems.
+dgov is the production governor: it parses plans, resolves providers, creates
+worktrees, builds prompts, runs workers, persists events, and settles results.
+The Rust kernel is a lawful-motion substrate: it should make illegal movement
+impossible or rejected at the typed boundary. Do not make Rust a second dgov.
+
+Rust already owns these authority surfaces:
+
+- plan ceremony: drafted -> intent recovered -> claims declared -> compiled ->
+  validated -> dispatched;
+- claim authority: canonical file paths, write coverage, read-only/shared
+  conflict rules, and rejection of escape paths;
+- DAG law: task identity validation, dependency validation, cycle rejection,
+  claimless task rejection, independent claim conflict rejection, dependency
+  gated dispatch, serial topological merge, and failure cascade;
+- runner/kernel event law: narrowed wait/review/merge outcomes instead of
+  Python's broad `TaskState`, boolean verdict bags, and optional merge error
+  bags;
+- pane binding after dispatch: review, merge, and interrupt actions carry the
+  pane that the runner bound to the task;
+- run law: pending -> running -> completed/failed, retry lineage, retry budget,
+  content-derived run ids, private Deposit construction, and derived Deposit
+  ids;
+- tributary law: validation rejects empty deposits, invalid touched paths, and
+  unclaimed writes; accepted validation alone can merge; merge alone can
+  baseline.
+
+Keep these dgov surfaces above Rust unless a current kernel transition consumes
+them:
+
+- real workers, subprocesses, provider/model selection, prompt construction,
+  rate limits, tool policy, panes, CLI/watch UI, and network APIs;
+- git worktree creation, branch naming, cleanup, base commits, and real merge
+  commands;
+- SQLite/event-store/ledger persistence, run logs, project archive mechanics,
+  and status dashboards;
+- project-specific policy such as department ownership, missing task test
+  commands, provider registries, import-graph diagnostics, prompt structure
+  checks, and language/toolchain recipes;
+- `DispatchRun` terminal telemetry: exit code, output dir, token counts,
+  iteration counts, timestamps, drift evidence, and SOP hashes;
+- file-change content hashes, validation evidence, sentrux evidence, semantic
+  review output, and merge evidence.
+
+The current Rust/dgov differences are intentional:
+
+- dgov `TaskState` includes dead or ambiguous variants (`DONE`,
+  `REVIEWED_FAIL`, `CLOSED`) because it is a runner-facing state bag. Rust's
+  DAG state removes those and reports worker wait as `TaskWaitOutcome`.
+- dgov `TaskReviewDone` uses `passed`, `verdict`, and `commit_count`. Rust uses
+  `TaskReviewOutcome::{Passed, Rejected, ReadScopeViolation}` because the
+  kernel only consumes the legal outcome.
+- dgov `TaskMergeDone` uses `error: str | None`. Rust uses
+  `TaskMergeOutcome::{Merged, Failed}` because error payloads are evidence for
+  the rim, not merge law.
+- dgov `MergeTask.file_claims` is a tuple of strings. Rust emits typed,
+  canonical `FileClaim` values, so settlement cannot bypass claim authority.
+- dgov `DispatchRun` is a durable execution-attempt record. Rust `Run` is a
+  narrow in-memory ceremony that exists to create a lawful `Deposit`.
+
+Near-term Rust work that survives the design gate:
+
+1. Harden pane identity at the kernel boundary. `TaskDispatched` still accepts
+   an empty or padded `pane_slug`, even though pane binding is now kernel law.
+   Add a `PaneSlug` validation path or a runtime rejection, plus focused tests
+   in `watershed-distributary/tests/dag_kernel.rs` and a pressure-test entry if
+   treated as constitutional.
+2. Consider typed `TaskSlug`/`PaneSlug` only if it removes repeated validation
+   and directly prevents malformed event motion. Do not introduce identifier
+   types just for aesthetics.
+3. Keep `DispatchRun` telemetry out of Rust until the effect runner reports a
+   terminal envelope and a kernel transition consumes that envelope. If this
+   becomes real, move the envelope, not the whole dgov execution record.
+4. Keep file-change hashes, validation evidence, and merge evidence deferred
+   until `Deposit` or `Validation` actually consumes them.
+
+Rivulet belongs above this boundary. If built by raiding FirePass MCP, it should
+be a Watermaster/rim inference surface that converts observations into typed
+kernel calls or draft claims. It should not mint canonical ids, decide merge
+law, or duplicate the kernel's claim checks.
 
 ## Lift Test
 
