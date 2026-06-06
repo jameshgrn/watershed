@@ -15,7 +15,7 @@ The vocabulary is fluvial because the science is fluvial — bedrock, distributa
 
 ## On entry, in this order
 
-1. `CANON.md` — the constitutional articles (I–XIV) and the Watermaster's vow.
+1. `CANON.md` — the constitutional articles (I–XVI) and the Watermaster's vow.
 2. The most recent entry in `sketches/lineage/`, then every prior entry in that directory.
 3. `SKETCHES.md` — the live structural draft.
 4. `sketches/THINKING.md` — the live brainstorm.
@@ -30,7 +30,7 @@ You mediate everything between the Source and watershed (CANON Article VI). You 
 
 ## Discipline (pointers)
 
-- Constitution: `CANON.md` Articles I–XIV.
+- Constitution: `CANON.md` Articles I–XVI.
 - Preflight (required for any schema/policy/SOP/canon change): `sops/watermaster-preflight.md`.
 - At passage (required when closing the session): `sops/watermaster-passage.md`.
 - All other SOPs: read them on entry; they're operational discipline you follow without restatement.
@@ -38,3 +38,7 @@ You mediate everything between the Source and watershed (CANON Article VI). You 
 ## Refuse what breaks the discipline
 
 Including from the Source. The discipline is the work.
+
+## Companion projects
+/Users/jakegearon/projects/watershed/watershed-kernel/ - Rust dispatcher implementing dgov doctrine.
+Read /Users/jakegearon/projects/watershed/watershed-kernel/AGENTS.md before working there.

@@ -4,7 +4,7 @@ title: Operator Shape
 summary: The discipline a typed Operator carries — Protocol surface, OperatorSpec static declarations including determinism class and tiling, OperatorParams base, OperatorResult and truth-source labeling, declared-checks with dual-residence Checks, registry, and the tiling-below-Operator layering.
 applies_to: [operator, operatorspec, operatorparams, operatorresult, check, declared_checks, determinism_class, tiling, backend, registry, flume]
 priority: must
-version: 2
+version: 1
 authored_by: Watermaster Pool
 inscribed: 2026-05-10
 canon_anchor: Articles II, III, IV, IX, X, XV
@@ -31,9 +31,8 @@ canon_anchor: Articles II, III, IV, IX, X, XV
 - populate `truth_source_by_field` per `sops/truth-source-labeling.md` for every Operator whose output participates in comparison; keys are field names of the output (`"elevation"`, `"flow_direction"`, etc.), values are one of `backend_native | reference_synthesized | diagnostic_only`
 - treat `OperatorResult.metadata` as operator-extension context only, never authoritative for typed fields, per `sops/data-contracts.md`
 - set the output Artifact's `Lineage.operation` to the Operator's `name`; lineage discipline otherwise per `sops/data-contracts.md`
-- represent every Check as a runtime-checkable Protocol carrying: `name: str` (property), `description: str` (property), `run(artifact: Artifact, inputs: Sequence[Artifact] = ()) -> CheckResult`; concrete Check classes implement the `inputs` parameter with the same default tuple — input-aware checks consume `inputs`; output-only checks ignore it
-- maintain dual-residence for every check named in `declared_checks()`: the same name appears both inline within the Operator's `execute()` flow (run during execution against in-memory state) and as a standalone Check class implementing the Protocol (run independently against an Artifact and, when the check is input-aware, against the input Artifacts passed via the standalone class's `inputs` parameter); both implementations produce `CheckResult`s with the same `check_name`
-- document a Check's input expectations (shape, order, type) in its `description` or class docstring when the Check is input-aware
+- represent every Check as a runtime-checkable Protocol carrying: `name: str` (property), `description: str` (property), `run(artifact: Artifact) -> CheckResult`
+- maintain dual-residence for every check named in `declared_checks()`: the same name appears both inline within the Operator's `execute()` flow (run during execution against in-memory state) and as a standalone Check class implementing the Protocol (run independently against any Artifact); both implementations produce `CheckResult`s with the same `check_name`
 - treat tile reconciliation as a backend concern below the Operator: the Operator declares `supports_tiling` and `tile_reconciliation_kind`; the backend (the engine that performs the computation) decides whether to tile and how to stitch
 - select a backend for an Operator at execution time through a separate backend-resolution surface; the Operator interface does not embed tiling logic
 - register every Operator in flume's operator-registry under its `name`; the registry's name is the canonical lookup; the registered name equals the Operator instance's `name` property
@@ -70,12 +69,11 @@ canon_anchor: Articles II, III, IV, IX, X, XV
 - the operator-registry returns the same Operator class for a given name across re-imports; name uniqueness holds across the registry
 - a query for "all Operators with `determinism_class = stable`" returns the expected set; the same holds for `supports_tiling = True`
 - a tiled execution of an Operator whose `supports_tiling = True` produces an `OperatorResult` indistinguishable in typed shape from a monolithic execution of the same Operator; only the backend's internals differ
-- every concrete Check class registered in the operator-registry accepts the `inputs: Sequence[Artifact] = ()` parameter without TypeError; `isinstance(check, Check)` holds for every registered Check class
 
 ## Escalate
 
 - if an Operator legitimately needs to accept untyped input (a string, path, or URI) as part of its surface — that is a Connector role per CANON Article III; propose decomposition into Connector + Operator, not an exception
-- if a Check legitimately cannot satisfy the dual-residence pattern (e.g., requires in-memory state not recoverable from the Artifact's backing nor from the input Artifacts via the standalone class's `inputs` parameter) — propose either lifting that state into a typed Artifact field, restricting the check to operator-internal use, or extending the Check Protocol via further preflight; do not weaken the dual-residence rule
+- if a Check legitimately cannot satisfy the dual-residence pattern (e.g., requires in-memory state not recoverable from the Artifact's backing) — propose either lifting that state into a typed Artifact field or restricting the check to operator-internal use; do not weaken the dual-residence rule
 - if existing quarry-operators implementations have `declared_checks()` entries without matching standalone Checks (partial dual-residence today) — the lift into flume is the time to close the gap; do not lift partial dual-residence into flume canonical state
 - if an Operator legitimately straddles determinism classes (e.g., float-deterministic on one architecture, float-stable across architectures) — declare the weaker class per `sops/determinism-class.md` and document the architecture-specific stronger guarantee in operator notes
 - if tile reconciliation cannot live below the Operator (e.g., the algorithm fundamentally depends on tile-aware logic at the algorithm level rather than the data level) — argue first that the algorithm is two operators (a tile-local one and a global one) rather than one tile-aware operator
