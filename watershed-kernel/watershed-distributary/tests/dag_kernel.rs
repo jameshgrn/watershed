@@ -253,7 +253,27 @@ fn raw_kernel_task_files_reject_invalid_claim_shape() {
     .expect_err("empty task file claim path should be rejected");
     assert!(matches!(
         empty_path,
-        DagError::EmptyClaimPath { task } if task == "a"
+        DagError::InvalidClaimPath { task, .. } if task == "a"
+    ));
+
+    let absolute_path = DagKernel::new(
+        deps.clone(),
+        BTreeMap::from([("a".to_owned(), vec![file_claim("/tmp/outside.rs")])]),
+    )
+    .expect_err("absolute file claim paths should be rejected");
+    assert!(matches!(
+        absolute_path,
+        DagError::InvalidClaimPath { task, .. } if task == "a"
+    ));
+
+    let parent_path = DagKernel::new(
+        deps.clone(),
+        BTreeMap::from([("a".to_owned(), vec![file_claim("src/../outside.rs")])]),
+    )
+    .expect_err("parent traversal should be rejected");
+    assert!(matches!(
+        parent_path,
+        DagError::InvalidClaimPath { task, .. } if task == "a"
     ));
 
     let unknown_task_files = DagKernel::new(

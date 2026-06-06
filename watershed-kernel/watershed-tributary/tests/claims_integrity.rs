@@ -134,3 +134,24 @@ fn rejects_sibling_paths_outside_directory_claim() {
         "deposit touched file without write authority 'src2/lib.rs'"
     );
 }
+
+#[test]
+fn rejects_deposit_touched_escape_path() {
+    let claims = vec![claim("src", ClaimKind::Exclusive)];
+    let deposit = deposit(
+        "synthetic deposit",
+        vec![PathBuf::from("src/../outside.rs")],
+        claims.clone(),
+    );
+
+    let validation = validate(deposit, &claims);
+
+    let Validation::Rejected(rejected) = validation else {
+        panic!("parent traversal touched paths should be rejected");
+    };
+
+    assert_eq!(
+        rejected.reason(),
+        "deposit touched invalid file path 'src/../outside.rs': path must not contain parent traversal: src/../outside.rs"
+    );
+}

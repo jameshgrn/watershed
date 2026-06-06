@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 use thiserror::Error;
-use watershed_contracts::FileClaim;
+use watershed_contracts::{FileClaim, FileClaimPathError};
 
 /// Per-task lifecycle state for the pure DAG kernel.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -287,8 +287,12 @@ pub enum DagError {
     EmptyDependency { task: String },
     #[error("DAG task '{task}' must declare at least one file claim")]
     MissingClaims { task: String },
-    #[error("DAG task '{task}' has an empty file claim path")]
-    EmptyClaimPath { task: String },
+    #[error("DAG task '{task}' has invalid file claim path '{path:?}': {source}")]
+    InvalidClaimPath {
+        task: String,
+        path: std::path::PathBuf,
+        source: FileClaimPathError,
+    },
     #[error("duplicate DAG task '{task}'")]
     DuplicateTask { task: String },
     #[error(
@@ -332,12 +336,7 @@ impl DagTask {
             return Err(DagError::MissingClaims { task: slug });
         }
 
-        if claims
-            .iter()
-            .any(|claim| claim.normalized_path().is_empty())
-        {
-            return Err(DagError::EmptyClaimPath { task: slug });
-        }
+        validate_claim_paths(&slug, &claims)?;
 
         Ok(Self {
             slug,
@@ -876,12 +875,7 @@ fn validate_task_files(
             return Err(DagError::UnknownTaskFiles { task: task.clone() });
         }
 
-        if claims
-            .iter()
-            .any(|claim| claim.normalized_path().is_empty())
-        {
-            return Err(DagError::EmptyClaimPath { task: task.clone() });
-        }
+        validate_claim_paths(task, claims)?;
     }
 
     Ok(())
@@ -962,16 +956,37 @@ fn first_claim_conflict(
 ) -> Option<ClaimConflict> {
     for left_claim in left_claims {
         for right_claim in right_claims {
-            if left_claim.conflicts_with(right_claim) {
+            if left_claim
+                .conflicts_with(right_claim)
+                .expect("claim paths are validated before conflict checks")
+            {
                 return Some(ClaimConflict {
-                    left_path: left_claim.normalized_path(),
-                    right_path: right_claim.normalized_path(),
+                    left_path: left_claim
+                        .normalized_path()
+                        .expect("claim paths are validated before conflict checks"),
+                    right_path: right_claim
+                        .normalized_path()
+                        .expect("claim paths are validated before conflict checks"),
                 });
             }
         }
     }
 
     None
+}
+
+fn validate_claim_paths(task: &str, claims: &[FileClaim]) -> Result<(), DagError> {
+    for claim in claims {
+        claim
+            .validate_path()
+            .map_err(|source| DagError::InvalidClaimPath {
+                task: task.to_owned(),
+                path: claim.path.clone(),
+                source,
+            })?;
+    }
+
+    Ok(())
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

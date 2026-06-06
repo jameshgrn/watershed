@@ -38,6 +38,8 @@ required_pressure_tests_are_registered is enforced by `watershed-distributary/te
 
 pressure_test_registry_self_consistent is enforced by `watershed-contracts/src/lib.rs`. The rule is that the pressure-test registry is itself well-formed: trimmed names are non-empty and unique, trimmed claims are non-empty, and every `enforced_by` path is non-empty and resolves to a file inside the workspace.
 
+file_claim_paths_reject_escape_forms is enforced by `watershed-contracts/src/lib.rs`, `watershed-distributary/tests/dag_plan.rs`, and `watershed-tributary/tests/claims_integrity.rs`. The rule is that file-claim authority paths reject empty paths, absolute paths, parent traversal, whitespace-only components, and current-directory-only forms before authorizing writes. Valid authority paths normalize to relative slash-separated paths for exact and descendant comparison.
+
 dag_kernel_serial_merge_scan is enforced by `watershed-distributary/tests/dag_kernel.rs`. The rule is that the DAG kernel remains pure and deterministic: dispatch is dependency-gated, merge is serial and topological, terminal failed/skipped tasks do not block later mergeable tasks, non-terminal earlier tasks do block later merge, and failure cascades only to pending dependents. This is the Rust expression of dgov's kernel idea — effects stay outside; the kernel emits typed actions.
 
 dag_kernel_binds_task_panes is enforced by `watershed-distributary/tests/dag_kernel.rs`. The rule is that the DAG kernel binds task pane identity when dispatch is acknowledged, rejects worker wait completion from any other pane, and carries the bound pane into review interrupts and merge actions.

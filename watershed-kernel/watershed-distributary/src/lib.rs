@@ -6,7 +6,9 @@ use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 use thiserror::Error;
-use watershed_contracts::{pressure_tests, ClaimKind, FileClaim, Policy, RecoveredIntent};
+use watershed_contracts::{
+    pressure_tests, ClaimKind, FileClaim, FileClaimPathError, Policy, RecoveredIntent,
+};
 
 mod sealed {
     pub trait Sealed {}
@@ -106,6 +108,15 @@ impl Plan<ClaimsDeclared> {
             return Err(CompileError::MissingClaims);
         }
 
+        for claim in &claims {
+            claim
+                .validate_path()
+                .map_err(|source| CompileError::InvalidClaimPath {
+                    path: claim.path.clone(),
+                    source,
+                })?;
+        }
+
         Ok(Plan {
             state: Compiled { intent, claims },
         })
@@ -163,6 +174,11 @@ impl Plan<Validated> {
 pub enum CompileError {
     #[error("cannot compile a plan with no file claims")]
     MissingClaims,
+    #[error("invalid file claim path '{path:?}': {source}")]
+    InvalidClaimPath {
+        path: PathBuf,
+        source: FileClaimPathError,
+    },
 }
 
 /// Errors raised while validating a compiled plan against policy.
