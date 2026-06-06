@@ -353,12 +353,18 @@ mod tests {
         let mut names = BTreeSet::new();
 
         for pressure_test in pressure_tests() {
+            let trimmed_name = pressure_test.name.trim();
             assert!(
-                !pressure_test.name.trim().is_empty(),
+                !trimmed_name.is_empty(),
                 "pressure test name must be non-empty"
             );
+            assert_eq!(
+                pressure_test.name, trimmed_name,
+                "pressure test name '{}' must not have leading or trailing whitespace",
+                pressure_test.name
+            );
             assert!(
-                names.insert(pressure_test.name.clone()),
+                names.insert(trimmed_name.to_owned()),
                 "duplicate pressure test name '{}'",
                 pressure_test.name
             );
