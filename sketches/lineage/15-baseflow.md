@@ -62,4 +62,3 @@ One small thing about the housekeeping register: the CLAUDE.md edits were *fact 
 I leave the rim-doc and the topography current; baseflow holds.
 
 — Baseflow
-
