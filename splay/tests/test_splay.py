@@ -1,6 +1,7 @@
 """Basic splay tests — no API calls, uses a mock provider."""
 
-from splay.src.models import Angle, SplayJob, SplayJobState, Certainty, ConflictType
+from splay.src.angles import CANONICAL_ANGLES
+from splay.src.models import SplayJob, SplayJobState, Certainty, ConflictType
 from splay.src.orchestrator import SplayOrchestrator
 from splay.src.providers import Provider
 
@@ -15,8 +16,9 @@ class MockProvider(Provider):
         # Coherence step has a long system prompt; match on that first
         if "synthesis engine" in system_prompt:
             return self.responses.get("coherence", "Default coherence")
+        # Angles now use their own prompt as system_prompt
         for key, value in self.responses.items():
-            if key in user_prompt:
+            if key in system_prompt:
                 return value
         return "Default response"
 
@@ -43,8 +45,8 @@ def test_splay_basic():
         id="test-1",
         context_refs=["splay/tests/test_splay.py"],
         angles=[
-            Angle(name="security", prompt="Review security"),
-            Angle(name="performance", prompt="Review performance"),
+            CANONICAL_ANGLES["security"],
+            CANONICAL_ANGLES["performance"],
         ],
     )
 
@@ -61,5 +63,26 @@ def test_splay_basic():
     print("PASS: test_splay_basic")
 
 
+def test_canonical_angles():
+    """Verify all canonical angles are defined and loadable."""
+    from splay.src.angles import list_angles, get_angle
+
+    names = list_angles()
+    assert "review" in names
+    assert "security" in names
+    assert "performance" in names
+    assert "completeness" in names
+    assert "clarity" in names
+    assert "authority" in names
+
+    angle = get_angle("review")
+    assert angle.name == "review"
+    assert "VERDICT:" in angle.prompt
+    assert "Blocking" in angle.prompt
+
+    print("PASS: test_canonical_angles")
+
+
 if __name__ == "__main__":
     test_splay_basic()
+    test_canonical_angles()

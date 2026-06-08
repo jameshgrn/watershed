@@ -79,14 +79,16 @@ class SplayOrchestrator:
         return {s.angle_name: s for s in results}
 
     async def _run_angle(self, job: SplayJob, angle: Angle) -> AngleSummary:
-        """Run a single angle as a read-only inference call."""
+        """Run a single angle as a read-only inference call.
+
+        The angle's prompt is the system prompt. The user's task is the
+        context loaded from the job's context_refs.
+        """
         context = self._load_context(job, angle)
-        system = (
-            f"You are a specialized reviewer. Your angle is: {angle.name}.\n"
-            "You are read-only. You may not suggest file edits or code changes. "
-            "You report findings only."
+        system = angle.prompt
+        user = (
+            f"Context:\n{context}\n\nReview the context above and report your findings."
         )
-        user = f"Context:\n{context}\n\nTask:\n{angle.prompt}"
         raw = self.provider.infer(system, user)
         return self._parse_angle(raw, angle.name)
 
