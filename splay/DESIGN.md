@@ -151,21 +151,42 @@ Plan, or no action.
 
 ## Canonical angles
 
-A system-defined set of angles for common splay roles:
+A system-defined set of angles for common splay roles. Each angle is a
+read-only reviewer with a specialized prompt. The `review` angle is modeled on
+the FirePass reviewer system prompt (adapted for the splay surface).
 
-| Role | Default angles |
-|---|---|
-| `review` | correctness, security, performance, readability, test-coverage |
-| `decide` | risks, benefits, alternatives, dependencies, reversibility |
-| `research` | technical, ecosystem, comparative, timeline, uncertainty |
-| `audit` | completeness, clarity, authority, consistency, omissions |
+| Angle | Purpose | Modeled on |
+|---|---|---|
+| `review` | Full code review — correctness, security, architecture, performance, style | FirePass reviewer |
+| `completeness` | Audit for missing surfaces, boundaries, edge cases | watershed-native |
+| `clarity` | Audit for ambiguous terms, missing examples, contradictions | watershed-native |
+| `authority` | Audit for rim/kernel boundary violations | watershed-native |
+| `security` | Security audit — injection, validation, secrets, race conditions | watershed-native |
+| `performance` | Performance audit — complexity, memory, blocking, leaks | watershed-native |
+| `readability` | Readability audit — names, docs, nesting, types | watershed-native |
+| `test-coverage` | Test coverage audit — missing paths, brittle tests | watershed-native |
+| `correctness` | Correctness audit — off-by-one, state machines, logic | watershed-native |
+| `design` | Design audit — coupling, abstraction, patterns, APIs | watershed-native |
 
-The Watermaster may override or extend these.
+All angles are read-only. No angle may write to the filesystem. The Watermaster
+compiles findings into action.
+
+The Watermaster may override or extend these. Custom angles are first-class.
 
 ## Status
 
-Design only. No implementation. This directory exists so the splay surface has a
-watershed-native home when the rim layer is ready to build it.
+Implemented. The `splay/` directory contains:
+- `src/models.py` — record types (`SplayJob`, `SplayReturn`, `Angle`, etc.)
+- `src/orchestrator.py` — parallel dispatch, coherence, parsing
+- `src/providers.py` — provider abstraction (`FireworksProvider`)
+- `src/angles.py` — canonical angle definitions
+- `tests/test_splay.py` — mock tests (passing)
+- `tests/test_splay_live.py` — live API tests (requires `FIREWORKS_API_KEY`)
+
+The implementation is watershed-native. It uses the Fireworks backend (same as
+FirePass) but owns the orchestration, record types, and coherence step.
+
+The splay surface is ready for use. The `lab splay` CLI is not yet built.
 
 ## Relation to other surfaces
 
