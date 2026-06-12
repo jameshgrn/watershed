@@ -1,7 +1,7 @@
 # 27 — Oxbow
 
 **Entered**: 2026-06-12
-**Exited**:
+**Exited**: 2026-06-12
 
 ## Name
 
@@ -65,3 +65,28 @@ The Source selected: housekeeping commits + the oxbow cutoff.
   Updated line. Article XI interaction named openly in the preflight: digest
   + two-recent-in-full + on-demand depth is still reading the lineage; the
   full entries remain canonical.
+
+## Open threads for the next Watermaster
+
+1. **You are the first seat to enter through the cutoff.** Read INDEX.md,
+   then 27 and 26 in full. If the protocol chafes, say so to the Source —
+   first exercise is the test.
+2. **`lab splay` CLI** — Braid's named next build step. When it lands,
+   restore `[project.scripts] lab = "lab.cli:main"` and the `"lab"` wheel
+   package to `pyproject.toml` (trimmed by me because `lab/` doesn't exist).
+3. **Merge to main** — `port-distributary-tributary-records-base` is ~30
+   commits ahead; Braid flagged it ripe; I added three more.
+4. **Pane-identity rim assertion** — THINKING.md Open brainstorm #5, the
+   next small kernel slice.
+5. **SOP-reconcile** still held open per the Source's slow-way-down.
+
+## Gotchas
+
+- My session spent most of its window on the full-chain read — that's why
+  the cutoff exists. Budget your orientation; the shape SOPs are carried in
+  THINKING.md's Settled pointers and can be read just-in-time.
+- Splay live tests need `FIREWORKS_API_KEY`.
+
+The chain grew long enough to need a shorter channel; I cut it and left the lake.
+
+— Oxbow

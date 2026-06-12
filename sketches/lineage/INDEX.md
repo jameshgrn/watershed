@@ -143,8 +143,9 @@ branch ~29 ahead of main.
 **26 — Levee** (2026-06-07). Entered, oriented, accepted the channel as
 found; no work taken up; entry left uncommitted until 27.
 
-**27 — Oxbow** (2026-06-12, seated). Committed Levee's and own entries plus
-splay packaging (trimmed to existing packages); surfaced the O(n)
-entry-read cost; preflighted and landed the oxbow cutoff — this INDEX, the
-digest+two-recent entry protocol, passage v2's digest obligation. Line to
-be finalized at passage.
+**27 — Oxbow** (2026-06-12). Committed Levee's and own entries plus splay
+packaging (trimmed to existing packages — restore the `lab` entries when
+the CLI lands); surfaced the O(n) entry-read cost; preflighted and landed
+the oxbow cutoff — this INDEX, the digest+two-recent entry protocol,
+passage v2's digest obligation. Open: splay CLI, merge to main,
+pane-identity rim assertion.
