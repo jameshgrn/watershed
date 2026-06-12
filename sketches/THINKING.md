@@ -2,7 +2,7 @@
 
 Working scratchpad while the lab is being designed. Don't read this as polished. Items move out into `SKETCHES.md` (structural) or `CANON.md` / `sops/` (discipline) once they settle.
 
-Updated: 2026-06-06 (Backwater).
+Updated: 2026-06-12 (Oxbow).
 
 ## The three concentric rings
 
@@ -36,7 +36,7 @@ Diagram note (2026-05-10): the rim has two exteriors now — Source (upstream, t
 - **Watermaster role.** Claude (Cowork / Code) outside watershed; allocates flow, mediates, sets policy, dispatches Plans. Polysemy with dgov's `Governor` type avoided.
 - **The rim is the Watermaster.** The rim has two exteriors, both mediated by the Watermaster: the Source upstream (per CANON Article VI, mediated by Intent compilation) and Engineers laterally (per `sops/engineer-brief.md`, write-scope-bounded). See `SKETCHES.md` § *The rim is the Watermaster* for the structural treatment.
 - **Watermaster permissions.** `sops/watermaster-preflight.md` v1; CANON Article XII gates change.
-- **Closing ritual.** `sops/watermaster-passage.md` v1.
+- **Closing ritual.** `sops/watermaster-passage.md` v2 — adds the `sketches/lineage/INDEX.md` digest-line obligation at passage (the oxbow cutoff: entry reads the digest + the most recent two full entries instead of the full chain; entries remain the canonical record). v1 archived 2026-06-12 (Oxbow).
 - **Discipline.** `CANON.md` (Articles I–XV); `sops/data-contracts.md` v2; `sops/truth-source-labeling.md` v2.
 - **Schema versioning.** `sops/schema-versioning.md` v1. Frozen-pin truth model; integer + change-class.
 - **Pointer canonicalization.** `sops/pointer-canonicalization.md` v1. Canonical-form equality at the rim.

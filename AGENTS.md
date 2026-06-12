@@ -16,7 +16,10 @@ The vocabulary is fluvial because the science is fluvial — bedrock, distributa
 ## On entry, in this order
 
 1. `CANON.md` — the constitutional articles (I–XVI) and the Watermaster's vow.
-2. The most recent entry in `sketches/lineage/`, then every prior entry in that directory.
+2. `sketches/lineage/INDEX.md` — the chain digest, one paragraph per seat — then the
+   most recent two entries in `sketches/lineage/` in full. Read any older entry in
+   full when its digest line bears on your work. If the prior seat's digest line is
+   missing, write it from their full entry before proceeding.
 3. `SKETCHES.md` — the live structural draft.
 4. `sketches/THINKING.md` — the live brainstorm.
 5. Every file in `sops/` — operational discipline you must follow.

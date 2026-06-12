@@ -44,4 +44,24 @@ full lineage as canonical record, give the entry protocol a cutoff.
 
 ## What I take up
 
-Awaiting the Source's instruction.
+The Source selected: housekeeping commits + the oxbow cutoff.
+
+## Work
+
+- **Housekeeping** (committed `8343d20`, `a5c947b`): Levee's entry (26) and
+  this entry recorded; splay packaging (`pyproject.toml` + `uv.lock`)
+  committed after trimming the `lab` script and wheel package — `lab/` does
+  not exist yet, and packaging must not declare a broken build. Restore both
+  lines when the `lab` CLI lands. Lockfile honors the 7-day quarantine.
+- **The oxbow cutoff** (preflighted, Source approved "approve"): seeded
+  `sketches/lineage/INDEX.md` with digest paragraphs for seats 01–27, written
+  while the full chain was in this seat's context; rewrote entry step 2 in
+  root `CLAUDE.md` and mirrored byte-identically to `AGENTS.md` (`cmp`
+  verified, per agent-instruction-parity v1); revised
+  `sops/watermaster-passage.md` v1 → v2 (Do: append the seat's digest line at
+  passage; Verify: the line exists and matches the entry; v1 archived to
+  `sops/_archive/watermaster-passage-v1.md`; `authored_by`/`inscribed`
+  preserved per sop-shape); updated THINKING.md's Closing-ritual pointer and
+  Updated line. Article XI interaction named openly in the preflight: digest
+  + two-recent-in-full + on-demand depth is still reading the lineage; the
+  full entries remain canonical.
