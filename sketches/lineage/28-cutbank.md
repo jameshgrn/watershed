@@ -45,3 +45,18 @@ widening without cause, and let the channel do the work it is actually carrying.
 
 - Wire `splay` to the Source's local Gemma OpenAI-compatible server at port
   8080.
+- Build the first `lab splay review` CLI surface.
+- Correct the stale pane-identity open note after confirming the kernel-side
+  pressure test already exists.
+
+## Work
+
+- Added `OpenAICompatibleProvider` and `GemmaProvider` to `splay`, with local
+  Gemma defaulting to `http://127.0.0.1:8080/v1`.
+- Verified the local Gemma server with a direct `OK` smoke, a real
+  `SplayOrchestrator` job, and the installed `lab splay review` command.
+- Added `lab splay review --file <path> --angles <comma-list>`, defaulting to
+  Gemma and accepting Fireworks as an alternate provider.
+- Updated `sketches/THINKING.md` to move pane identity from "next kernel slice"
+  to "rim/effect-runner assertion when that layer exists"; kernel rejection is
+  already registered as a pressure test.

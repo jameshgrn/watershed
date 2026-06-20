@@ -171,6 +171,8 @@ class SplayOrchestrator:
 
         if section == "synthesis" and not synthesis:
             synthesis = "\n".join(buffer).strip()
+        if not synthesis:
+            synthesis = raw.strip()
 
         return SplayReturn(
             job_id=job_id,

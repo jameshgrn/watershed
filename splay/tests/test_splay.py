@@ -83,6 +83,27 @@ def test_canonical_angles():
     print("PASS: test_canonical_angles")
 
 
+def test_unstructured_coherence_falls_back_to_raw_synthesis():
+    provider = MockProvider(
+        {
+            "clarity": "The implementation is understandable.",
+            "coherence": "The implementation is clear enough to proceed.",
+        }
+    )
+    orchestrator = SplayOrchestrator(provider)
+    job = SplayJob(
+        id="test-unstructured",
+        context_refs=["splay/tests/test_splay.py"],
+        angles=[CANONICAL_ANGLES["clarity"]],
+    )
+
+    result = orchestrator.submit(job)
+
+    assert result.synthesis == "The implementation is clear enough to proceed."
+    assert result.recommended_next_surface == "none"
+
+
 if __name__ == "__main__":
     test_splay_basic()
     test_canonical_angles()
+    test_unstructured_coherence_falls_back_to_raw_synthesis()

@@ -13,8 +13,11 @@ dependencies = [
     "httpx>=0.27",
 ]
 
+[project.scripts]
+lab = "lab.cli:main"
+
 [tool.hatch.build.targets.wheel]
-packages = ["splay"]
+packages = ["lab", "splay"]
 
 [tool.ruff]
 line-length = 88

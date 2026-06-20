@@ -119,6 +119,22 @@ def test_openai_compatible_provider_errors_on_missing_content():
     try:
         provider.infer("system", "user")
     except ProviderError as exc:
-        assert "message.content" in str(exc)
+        assert "message.content or message.reasoning" in str(exc)
     else:
         raise AssertionError("ProviderError not raised")
+
+
+def test_openai_compatible_provider_uses_reasoning_when_content_missing():
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"reasoning": "reasoned response"}}]},
+        )
+
+    provider = OpenAICompatibleProvider(
+        base_url="http://example.test/v1",
+        model="gemma-test",
+        transport=httpx.MockTransport(handler),
+    )
+
+    assert provider.infer("system", "user") == "reasoned response"

@@ -115,13 +115,10 @@ splay.return(job_id) -> SplayReturn
 splay.cancel(job_id) -> SplayJob
 ```
 
-Convenience commands:
+Convenience command:
 
 ```
 lab splay review --file src/dag.rs --angles "security,performance,readability"
-lab splay decide --prompt "Should we merge the distributary-tributary port?"
-lab splay research --topic "DuckDB spatial indexing" --angles "technical,ecosystem,comparative"
-lab splay audit --sop intent-compilation --angles "completeness,clarity,authority"
 ```
 
 ## Coherence step
@@ -181,7 +178,9 @@ Implemented. The `splay/` directory contains:
 - `src/providers.py` — provider abstraction (`FireworksProvider`,
   `GemmaProvider`, `OpenAICompatibleProvider`)
 - `src/angles.py` — canonical angle definitions
+- `lab/cli.py` — `lab splay review` command
 - `tests/test_splay.py` — mock tests (passing)
+- `lab/tests/test_cli.py` — CLI tests (passing)
 - `tests/test_splay_live.py` — live API tests (requires `FIREWORKS_API_KEY`)
 
 The implementation is watershed-native. It can use the Fireworks backend or a
@@ -197,10 +196,16 @@ provider = GemmaProvider()  # http://127.0.0.1:8080/v1
 orchestrator = SplayOrchestrator(provider)
 ```
 
+CLI:
+
+```
+lab splay review --file splay/src/providers.py --angles "clarity,correctness"
+```
+
 Override with `SPLAY_GEMMA_BASE_URL`, `SPLAY_GEMMA_MODEL`, and
 `SPLAY_GEMMA_API_KEY` when the local server differs from the defaults.
 
-The splay surface is ready for use. The `lab splay` CLI is not yet built.
+The splay surface is ready for use through Python or `lab splay review`.
 
 ## Relation to other surfaces
 

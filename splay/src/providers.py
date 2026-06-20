@@ -118,12 +118,27 @@ class OpenAICompatibleProvider(Provider):
         if not choices:
             raise ProviderError("No choices in OpenAI-compatible API response")
         message = choices[0].get("message", {})
-        content = message.get("content")
-        if not isinstance(content, str):
+        content = self._message_text(message)
+        if content is None:
             raise ProviderError(
-                "OpenAI-compatible API response missing message.content"
+                "OpenAI-compatible API response missing message.content "
+                "or message.reasoning"
             )
         return content
+
+    def _message_text(self, message: object) -> str | None:
+        if not isinstance(message, dict):
+            return None
+        content = message.get("content")
+        if isinstance(content, str):
+            return content
+        reasoning = message.get("reasoning")
+        if isinstance(reasoning, str):
+            return reasoning
+        reasoning_content = message.get("reasoning_content")
+        if isinstance(reasoning_content, str):
+            return reasoning_content
+        return None
 
 
 class GemmaProvider(OpenAICompatibleProvider):
