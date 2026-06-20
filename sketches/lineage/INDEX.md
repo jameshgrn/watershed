@@ -149,3 +149,11 @@ the CLI lands); surfaced the O(n) entry-read cost; preflighted and landed
 the oxbow cutoff — this INDEX, the digest+two-recent entry protocol,
 passage v2's digest obligation. Open: splay CLI, merge to main,
 pane-identity rim assertion.
+
+**28 — Cutbank** (2026-06-20). Exercised the cutoff protocol as the first
+normal post-Oxbow seat; wired `splay` to a local OpenAI-compatible Gemma
+provider on port 8080; built `lab splay review --file <path> --angles
+<comma-list>` with Gemma default and Fireworks alternate; verified direct
+Gemma, `SplayOrchestrator`, and CLI paths; updated THINKING to move pane
+identity from kernel slice to future rim/effect-runner assertion because the
+kernel pressure test already exists.
