@@ -1,7 +1,7 @@
-"""Splay — Parallel inference with coherence for watershed.
+"""Splay - parallel inference with coherence for watershed.
 
-A watershed-native rim surface. Uses the Fireworks backend (same as FirePass)
-but owns the orchestration, record types, and coherence step.
+A watershed-native rim surface. Provider backends are swappable; the package
+ships Fireworks and local OpenAI-compatible Gemma providers.
 """
 
 from splay.src.angles import CANONICAL_ANGLES, get_angle, list_angles, resolve_angles
@@ -13,7 +13,11 @@ from splay.src.models import (
     SplayReturn,
 )
 from splay.src.orchestrator import SplayOrchestrator
-from splay.src.providers import FireworksProvider
+from splay.src.providers import (
+    FireworksProvider,
+    GemmaProvider,
+    OpenAICompatibleProvider,
+)
 
 __all__ = [
     "Angle",
@@ -24,6 +28,8 @@ __all__ = [
     "SplayReturn",
     "SplayOrchestrator",
     "FireworksProvider",
+    "GemmaProvider",
+    "OpenAICompatibleProvider",
     "get_angle",
     "list_angles",
     "resolve_angles",

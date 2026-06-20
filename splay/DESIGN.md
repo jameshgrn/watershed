@@ -178,13 +178,27 @@ The Watermaster may override or extend these. Custom angles are first-class.
 Implemented. The `splay/` directory contains:
 - `src/models.py` — record types (`SplayJob`, `SplayReturn`, `Angle`, etc.)
 - `src/orchestrator.py` — parallel dispatch, coherence, parsing
-- `src/providers.py` — provider abstraction (`FireworksProvider`)
+- `src/providers.py` — provider abstraction (`FireworksProvider`,
+  `GemmaProvider`, `OpenAICompatibleProvider`)
 - `src/angles.py` — canonical angle definitions
 - `tests/test_splay.py` — mock tests (passing)
 - `tests/test_splay_live.py` — live API tests (requires `FIREWORKS_API_KEY`)
 
-The implementation is watershed-native. It uses the Fireworks backend (same as
-FirePass) but owns the orchestration, record types, and coherence step.
+The implementation is watershed-native. It can use the Fireworks backend or a
+local OpenAI-compatible Gemma server, but owns the orchestration, record types,
+and coherence step.
+
+Local Gemma default:
+
+```
+from splay import GemmaProvider, SplayOrchestrator
+
+provider = GemmaProvider()  # http://127.0.0.1:8080/v1
+orchestrator = SplayOrchestrator(provider)
+```
+
+Override with `SPLAY_GEMMA_BASE_URL`, `SPLAY_GEMMA_MODEL`, and
+`SPLAY_GEMMA_API_KEY` when the local server differs from the defaults.
 
 The splay surface is ready for use. The `lab splay` CLI is not yet built.
 

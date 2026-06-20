@@ -10,7 +10,6 @@ They report findings only. The Watermaster compiles findings into action.
 
 from splay.src.models import Angle
 
-
 # ---------------------------------------------------------------------------
 # Canonical angle prompts
 # ---------------------------------------------------------------------------

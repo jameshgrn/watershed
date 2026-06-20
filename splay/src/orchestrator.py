@@ -11,14 +11,13 @@ from splay.src.models import (
     Angle,
     AngleSummary,
     Certainty,
-    CrossAngleConflict,
     ConflictType,
+    CrossAngleConflict,
     SplayJob,
     SplayJobState,
     SplayReturn,
 )
 from splay.src.providers import Provider
-
 
 DEFAULT_COHERENCE_PROMPT = """\
 You are a synthesis engine. You receive N angle summaries from a parallel review
@@ -98,7 +97,7 @@ class SplayOrchestrator:
         parts = []
         for ref in refs:
             try:
-                with open(ref, "r", encoding="utf-8") as f:
+                with open(ref, encoding="utf-8") as f:
                     parts.append(f"--- {ref} ---\n{f.read()}")
             except FileNotFoundError:
                 parts.append(f"--- {ref} ---\n[file not found]")
@@ -166,8 +165,7 @@ class SplayOrchestrator:
             if line.startswith("NEXT:"):
                 section = "next"
                 val = line.split(":", 1)[-1].strip().lower()
-                if val in {"intent", "brief", "plan", "none"}:
-                    next_surface = val
+                next_surface = self._parse_next_surface(val)
                 continue
             buffer.append(line)
 
@@ -215,6 +213,17 @@ class SplayOrchestrator:
             "LOW": Certainty.LOW,
         }
         return mapping.get(val, Certainty.MEDIUM)
+
+    def _parse_next_surface(
+        self, val: str
+    ) -> Literal["intent", "brief", "plan", "none"]:
+        mapping: dict[str, Literal["intent", "brief", "plan", "none"]] = {
+            "intent": "intent",
+            "brief": "brief",
+            "plan": "plan",
+            "none": "none",
+        }
+        return mapping.get(val, "none")
 
     def _parse_conflict_type(self, val: str) -> ConflictType:
         mapping = {

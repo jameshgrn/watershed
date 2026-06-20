@@ -1,7 +1,7 @@
 """Basic splay tests — no API calls, uses a mock provider."""
 
 from splay.src.angles import CANONICAL_ANGLES
-from splay.src.models import SplayJob, SplayJobState, Certainty, ConflictType
+from splay.src.models import Certainty, ConflictType, SplayJob, SplayJobState
 from splay.src.orchestrator import SplayOrchestrator
 from splay.src.providers import Provider
 
@@ -65,7 +65,7 @@ def test_splay_basic():
 
 def test_canonical_angles():
     """Verify all canonical angles are defined and loadable."""
-    from splay.src.angles import list_angles, get_angle
+    from splay.src.angles import get_angle, list_angles
 
     names = list_angles()
     assert "review" in names

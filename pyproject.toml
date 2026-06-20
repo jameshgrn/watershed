@@ -18,6 +18,8 @@ packages = ["splay"]
 
 [tool.ruff]
 line-length = 88
+
+[tool.ruff.lint]
 select = ["E", "F", "I", "W", "N", "UP", "B", "C4", "SIM"]
 ignore = ["E501"]
 
