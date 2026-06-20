@@ -1,0 +1,8 @@
+error[E0599]: no method named `retry` found for struct `Run<watershed_distributary::Completed>` in the current scope
+ --> $WORKSPACE/tests/compile_fail/retry_completed_run.rs
+  |
+  |     let _retry = completed.retry();
+  |                            ^^^^^ method not found in `Run<watershed_distributary::Completed>`
+  |
+  = note: the method was found for
+          - `Run<watershed_distributary::Failed>`

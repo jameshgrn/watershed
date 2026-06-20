@@ -1,0 +1,23 @@
+error[E0560]: struct `watershed_distributary::dag::TaskReviewDone` has no field named `passed`
+ --> $WORKSPACE/tests/compile_fail/review_done_rejects_boolean_verdict_bag.rs
+  |
+  |         passed: true,
+  |         ^^^^^^ `watershed_distributary::dag::TaskReviewDone` does not have this field
+  |
+  = note: available fields are: `outcome`
+
+error[E0560]: struct `watershed_distributary::dag::TaskReviewDone` has no field named `verdict`
+ --> $WORKSPACE/tests/compile_fail/review_done_rejects_boolean_verdict_bag.rs
+  |
+  |         verdict: "ok".to_owned(),
+  |         ^^^^^^^ `watershed_distributary::dag::TaskReviewDone` does not have this field
+  |
+  = note: available fields are: `outcome`
+
+error[E0560]: struct `watershed_distributary::dag::TaskReviewDone` has no field named `commit_count`
+ --> $WORKSPACE/tests/compile_fail/review_done_rejects_boolean_verdict_bag.rs
+  |
+  |         commit_count: 1,
+  |         ^^^^^^^^^^^^ `watershed_distributary::dag::TaskReviewDone` does not have this field
+  |
+  = note: available fields are: `outcome`

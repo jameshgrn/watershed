@@ -1,0 +1,23 @@
+{
+  "$comment": "PressureTest schema content sha256 16c792e4c7d3c20a5fb6a75e0ea60461487afe52d40459b0ccd7fcc58306e02d",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "A named invariant and the deterministic test that enforces it.",
+  "properties": {
+    "claim": {
+      "type": "string"
+    },
+    "enforced_by": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "claim",
+    "enforced_by",
+    "name"
+  ],
+  "title": "PressureTest",
+  "type": "object"
+}

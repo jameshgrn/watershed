@@ -1,0 +1,18 @@
+{
+  "$comment": "RollbackSpec schema content sha256 a4f27fae02410dbe9a54bc0f176b0470ee98aff56048f0450ad64dde44313e11",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "In-memory description of how task work is reverted.",
+  "properties": {
+    "steps": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "steps"
+  ],
+  "title": "RollbackSpec",
+  "type": "object"
+}

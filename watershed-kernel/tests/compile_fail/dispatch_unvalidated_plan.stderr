@@ -1,0 +1,15 @@
+error[E0308]: mismatched types
+ --> $WORKSPACE/tests/compile_fail/dispatch_unvalidated_plan.rs
+  |
+  |     let _run = dispatch(plan);
+  |                -------- ^^^^ expected `Plan<Validated>`, found `Plan<Drafted>`
+  |                |
+  |                arguments to this function are incorrect
+  |
+  = note: expected struct `Plan<Validated>`
+             found struct `Plan<Drafted>`
+note: function defined here
+ --> $WORKSPACE/watershed-distributary/src/lib.rs
+  |
+  | pub fn dispatch(plan: Plan<Validated>) -> Run<Pending> {
+  |        ^^^^^^^^

@@ -1,72 +1,162 @@
 # watershed/
 
-Personal research lab. Fluvial geomorphology + hydrology + remote sensing + dynamics.
+Personal research lab for fluvial systems: geomorphology, hydrology, remote
+sensing, geoinformatics, and dynamics.
+
+Watershed is a typed research lab, not a product surface. Human requests enter
+at the rim through the Watermaster, then move through contracts, lineage, and
+typed records. The fluvial vocabulary is intentional: the names match the way
+work moves through the lab.
+
+## Operating Frame
+
+- `CANON.md` is the constitutional source: sixteen articles, the Watermaster's
+  vow, lineage requirements, and typed surfaces.
+- `AGENTS.md` and `CLAUDE.md` are byte-identical Watermaster entry documents:
+  read canon, lineage, `SKETCHES.md`, `sketches/THINKING.md`, and every SOP
+  before beginning work.
+- `sops/` holds 20 live operating documents for intent compilation, plan,
+  dispatch-run, deposit, validation, merge, baseline, data-contract, truth
+  source, event, preflight, and passage discipline.
+- `sketches/lineage/` is the Watermaster succession chain. Each Watermaster
+  reads the prior chain on entry and leaves a page for the next.
+- The Source speaks naturally; the Watermaster mediates that into typed lab
+  action. Tools are for the Watermaster. Artifacts carry lineage.
 
 ## Layout
 
-```
+```text
 watershed/
-├── bedrock/        # canonical data + policy + schemas — source of truth
-├── distributary/   # agent dispatch, plan trees, worktrees   (← dgov, fan-out half)
-├── tributary/      # ingest, validate, merge to main          (← dgov, fan-in half)
-├── quarry/         # data orchestration: connectors, transforms, ETL boundary
-├── flume/          # strict-typed scientific workshop — only canonical types intake
-├── outcrop/        # lit corpus — Zotero + arXiv + embeddings + cite
-├── mosaic/         # viz consumer — globe, basemaps, satellite renders   (← topos)
-├── strata/         # manuscript consumer — lint, bind, review            (← writing/scilint)
-├── shared/         # cross-module typed contracts
-└── tools/          # lab-wide CLI + scripts
+|-- CANON.md          # constitutional articles and Watermaster vow
+|-- sops/             # operational discipline for Watermasters and Workers
+|-- sketches/         # live thinking, structural drafts, and lineage
+|-- bedrock/          # canonical data, policy, schemas
+|-- watershed-kernel/ # Rust authority-bearing substrate
+|   |-- watershed-contracts/    # portable contracts: claims, policy, schemas
+|   |-- watershed-distributary/ # lawful fan-out: DAG, Plan, Run, Deposit
+|   `-- watershed-tributary/    # lawful fan-in: Validation, Merge, Baseline
+|-- quarry/           # connector and transform boundary, untyped to typed
+|-- rivulet/          # Watermaster side-channel for research and critique
+|-- flume/            # strict-typed scientific workshop
+|-- outcrop/          # literature corpus and reference substrate
+|-- mosaic/           # visual consumer: maps, globes, satellite renders
+|-- strata/           # prose consumer: manuscripts, lint, review
+|-- shared/           # cross-module typed contracts, pending migration
+`-- tools/            # lab-wide scripts and rim tooling, pending migration
 ```
 
-## Two orthogonal axes
+The Rust kernel is the first real source inside this tree. Non-kernel modules
+are pending migration unless their local README states otherwise. Retired
+top-level `distributary/` and `tributary/` package scaffolds should not be
+recreated.
 
-The lab runs on two orchestration axes that look the same shape but have different invariants:
+## Two Axes
 
-**Code/agent axis (vertical):**
+Watershed runs on two orchestration axes that have similar shape but different
+invariants.
 
-```
-distributary  ──fan out──▶  agents work in worktrees
-                                       │
-                                  typed outputs
-                                       │
-tributary     ◀──fan in────────────────┘
-                                       │
-                                merge to main
-```
+**Code and agent axis:**
 
-**Data axis (horizontal):**
-
-```
-bedrock  ──▶  quarry  ──▶  flume  ──▶  { mosaic, strata }
-canonical    transforms   strict-typed   image, prose
-data         + connectors  workshop      consumers
+```text
+watershed-kernel/watershed-distributary  --fan out--> lawful runs
+                                                        |
+                                                   typed deposits
+                                                        |
+watershed-kernel/watershed-tributary     <--fan in------`
+                                                        |
+                                                validation / merge
 ```
 
-`outcrop/` feeds upstream into the data axis (citations into strata, references into flume). The static layers (`bedrock`, `outcrop`) bracket the dynamic work — substrate beneath, exposed knowledge above; everything in between flows.
+**Data axis:**
 
-## The narrative
+```text
+bedrock  ->  quarry  ->  flume  ->  { mosaic, strata }
+canonical    transforms  strict      image, prose
+data         connectors  workshop    consumers
+```
 
-The substrate doesn't move. **Bedrock** holds what's true. **Distributary** fans out agents to do work; **tributary** brings their typed outputs back and merges them. **Quarry** transforms raw data from bedrock into the strict types **flume** consumes — flume is where the actual science runs with full type discipline. **Mosaic** and **strata** present flume's outputs as image and prose. **Outcrop** is the visible exposed face of accumulated literature — feeds into strata as citations, into flume as ground truth from prior work.
+`outcrop/` feeds upstream into the data axis as literature and reference
+material. `rivulet/` is advisory to the Watermaster and does not author law or
+Deposits.
 
-## Type discipline by module
+## Current Source
 
-| module | type stance |
+`watershed-kernel/` is a Rust workspace split across three crates:
+
+- `watershed-contracts` owns portable records such as `RecoveredIntent`,
+  `FileClaim`, `Policy`, `PressureTest`, and generated JSON Schema.
+- `watershed-distributary` owns outbound lawful motion: typed DAG declarations,
+  the pure DAG kernel, the `Plan` state machine, worker `Run` lifecycle, and
+  authoritative `Deposit` records.
+- `watershed-tributary` owns inbound settlement: `Validation`, `Merge`, and
+  `Baseline`.
+
+The lawful path is:
+
+```text
+Plan<Drafted>
+  -> recover_intent
+  -> declare_claims
+  -> compile
+  -> validate
+  -> dispatch
+  -> Run<Pending>
+  -> start
+  -> complete
+  -> Deposit
+  -> Validation
+  -> Merge
+  -> Baseline
+```
+
+The kernel is intentionally in-memory. It does not dispatch real workers,
+create worktrees, persist a registry, expose a CLI, run a scheduler service, or
+provide real validation gates. It makes illegal motion impossible where the law
+is carried by sealed states, consuming transitions, and crate boundaries; the
+remaining runtime laws are held by pressure tests. See
+`watershed-kernel/README.md` and
+`watershed-kernel/PRESSURE_TESTS.md`.
+
+## Module Roles
+
+| module | current role |
 |---|---|
-| bedrock | schema-defined data, policy-aligned |
-| quarry | accepts untyped inputs from outside, emits typed outputs |
-| flume | refuses non-canonical inputs; everything in is strict-typed |
-| mosaic, strata | consume flume's typed outputs |
-| outcrop | typed `Reference` records |
-| distributary, tributary | typed `Run`, `Plan`, `Deposit`, `Merge` |
+| `bedrock/` | canonical data, policy, schemas |
+| `watershed-kernel/` | Rust lawful-motion substrate |
+| `quarry/` | untyped external input boundary; emits typed outputs |
+| `rivulet/` | advisory inference for Watermaster research and review |
+| `flume/` | strict-typed scientific operators and workshop flow |
+| `outcrop/` | typed `Reference` records and literature substrate |
+| `mosaic/` | visual consumer for maps, globes, and satellite renders |
+| `strata/` | prose consumer for manuscript and review surfaces |
+| `shared/` | future cross-module contracts outside the Rust kernel |
+| `tools/` | future lab-wide rim tooling |
 
-## Status
+Top-level Python `distributary/` and `tributary/` packages are not part of the
+current design. Authority-bearing fan-out and fan-in live in Rust under
+`watershed-kernel/`. Future Python or TypeScript rim code should consume that
+substrate instead of duplicating its state machines.
 
-**Scaffolding under review.** Each module directory holds a placeholder `README.md` describing its role, provenance (which existing repo absorbs into it), public types it will own, and current status. No code migrated yet.
+## Migration
 
-When ready: see `MIGRATION.md`.
+Watershed is collapsing several active lines of work into one lab surface:
+`dgov`, the prior standalone `quarry`, `writing`/`scilint`, `topos`, and related
+geospatial tooling. The migration rule is conservative: move authority into the
+Rust kernel only when a transition consumes it, and leave orchestration above
+the kernel until a typed rim layer needs it.
 
-## Why this exists
+Use:
 
-dgov + quarry-as-it-was + writing/scilint + topos were converging into one integrated control surface. Polyrepo integration tax was about to dominate the moonshot work in the cross-cutting layer. Monorepo with typed shared contracts collapses that tax. The names match what each module *does* — fluvial-system vocabulary because that's the shape of the science.
+- `MIGRATION.md` for migration order and rename/split rules.
+- `TOPOGRAPHY.md` for the dated ecosystem map and unresolved operator
+  decisions.
+- `SKETCHES.md` and `sketches/THINKING.md` for live structural thinking.
 
-Manager-mode notes (Cowork-side context) live at `~/projects/CLAUDE.md`.
+## Why This Exists
+
+The prior projects were converging into one cross-cutting control surface.
+Keeping them as separate repos would make integration tax dominate the work.
+Watershed keeps the scientific, governance, and agent surfaces together while
+forcing movement through typed contracts and lineage.
+
+Manager-mode notes outside the lab live at `~/projects/CLAUDE.md`.

@@ -1,0 +1,18 @@
+{
+  "$comment": "VerificationSpec schema content sha256 b42d234d545b83b04a85182fc9353b76c73c8fc574aca8a1a111692693957fbb",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "In-memory description of how task success is checked.",
+  "properties": {
+    "checks": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "checks"
+  ],
+  "title": "VerificationSpec",
+  "type": "object"
+}

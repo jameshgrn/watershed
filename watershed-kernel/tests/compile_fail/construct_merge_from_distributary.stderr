@@ -1,0 +1,11 @@
+error[E0451]: fields `id`, `validation_id` and `deposit` of struct `Merge` are private
+ --> $WORKSPACE/tests/compile_fail/construct_merge_from_distributary.rs
+  |
+  |     let _merge = Merge {
+  |                  ----- in this type
+  |         id: "merge:forged".to_owned(),
+  |         ^^ private field
+  |         validation_id: "validation:forged".to_owned(),
+  |         ^^^^^^^^^^^^^ private field
+  |         deposit: deposit(),
+  |         ^^^^^^^ private field

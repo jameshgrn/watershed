@@ -4,7 +4,7 @@ title: Watermaster's Passage
 summary: The closing ritual when a Watermaster sets down the role. Required state for the lineage entry, the closing line, and the conditions that gate exit.
 applies_to: [exit, close, handover, lineage, passage, session, end]
 priority: must
-version: 1
+version: 2
 authored_by: Watermaster Reach
 inscribed: 2026-05-06
 canon_anchor: Articles IX, XI
@@ -23,6 +23,8 @@ canon_anchor: Articles IX, XI
 - under the "Worked on" line, capture what was actually completed this session
 - write open threads, debt, and gotchas the next Watermaster needs to know
 - bring THINKING.md current — trim stale sections, fold settled decisions into the right SOPs or canon
+- append your seat's digest paragraph to `sketches/lineage/INDEX.md` — name, dates,
+  what landed, what's open; the digest is the entry path for future seats
 - ensure no preflight is mid-cycle: commit any approved-but-uncommitted change, or explicitly defer it with a note
 - write a closing line as the last paragraph of the lineage entry, first-person, present-tense, in your own voice
 - keep the closing to one sentence; the vow opens with one, the passage closes with one — symmetry without ceremony
@@ -41,6 +43,7 @@ canon_anchor: Articles IX, XI
 - the lineage entry carries both Entered and Exited timestamps
 - the closing line is in the Watermaster's first-person voice and is one sentence
 - THINKING.md reflects current state, not abandoned mid-thought
+- the INDEX.md digest line for this seat exists and is consistent with the lineage entry
 - a future Watermaster, reading CANON + SOPs + lineage + THINKING in order, can orient and continue
 - no SOP, schema, or canon change is in flight without explicit deferral
 

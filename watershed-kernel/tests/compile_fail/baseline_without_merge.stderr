@@ -1,0 +1,13 @@
+error[E0308]: mismatched types
+ --> $WORKSPACE/tests/compile_fail/baseline_without_merge.rs
+  |
+  |     let _baseline = baseline(accepted);
+  |                     -------- ^^^^^^^^ expected `Merge`, found `AcceptedValidation`
+  |                     |
+  |                     arguments to this function are incorrect
+  |
+note: function defined here
+ --> src/lib.rs
+  |
+  | pub fn baseline(merge: Merge) -> Baseline {
+  |        ^^^^^^^^

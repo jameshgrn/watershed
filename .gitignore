@@ -7,8 +7,10 @@ __pycache__/
 .ruff_cache/
 .mypy_cache/
 .ty/
+.dgov/state.db*
 .venv/
 venv/
 dist/
 build/
+target/
 *.egg-info/

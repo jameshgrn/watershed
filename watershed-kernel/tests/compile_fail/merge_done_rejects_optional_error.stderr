@@ -1,0 +1,7 @@
+error[E0560]: struct `watershed_distributary::dag::TaskMergeDone` has no field named `error`
+ --> $WORKSPACE/tests/compile_fail/merge_done_rejects_optional_error.rs
+  |
+  |         error: None,
+  |         ^^^^^ `watershed_distributary::dag::TaskMergeDone` does not have this field
+  |
+  = note: available fields are: `outcome`

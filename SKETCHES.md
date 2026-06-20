@@ -39,6 +39,12 @@ The **Source** is the upstream exterior, per CANON Article VI: *the Watermaster 
 
 **Engineers** (Codex, Claude Code, Gemini Pro, etc.) are a lateral exterior — external intelligences consulted directly by the Watermaster via typed Briefs per `sops/engineer-brief.md`. An Engineer reads only the Brief (never the conversation), executes within an explicit `write_scope`, and returns drafts, critiques, or file writes. The seated Watermaster is the author of record for every committed artifact whether the originating work came through Intent compilation or Engineer execution; lineage entries (`sketches/lineage/*`) remain Watermaster-only.
 
+**Rivulets** are internal side-channel inference flows for the Watermaster:
+cheap/background research, critique, summarization, or review of reasoning.
+They are not Workers and do not produce Deposits. They are not Engineers by
+default and do not carry Brief authority. A rivulet return is advisory evidence
+until the Watermaster compiles it into an Intent, Brief, Plan, or no action.
+
 Structural consequence: no module has a human-facing UI, no watched drop folders, no human-readable config that bypasses the typed surfaces. `tools/` is a CLI for the Watermaster's use, invoked via the Watermaster's shell; output formats can be LLM-friendly rather than human-friendly. Module surfaces below describe the contracts modules expose to *other modules and to the Watermaster*, never to humans directly. The whole Source-facing UX is conversation with the Watermaster, who compiles intent into typed calls against the surfaces. The whole Engineer-facing UX is the typed Brief.
 
 | Source says | Watermaster does |
@@ -46,6 +52,7 @@ Structural consequence: no module has a human-facing UI, no watched drop folders
 | "ingest this paper" + URL/PDF | calls `outcrop.add(...)`, returns Reference id |
 | "ingest these gauges" + spec | compiles SourceRef, calls `quarry.materialize(...)`, registers via bedrock |
 | "regenerate Figure 3 with new SWORD" | compiles a Plan, dispatches via `distributary.dispatch(...)` |
+| "stress-test this plan" | calls `rivulet.review_plan(...)`, then decides whether to revise |
 | "lint the avulsion paper" | calls `strata.lint(manuscript_id, tier=...)`, returns Findings |
 | "what's the state of the lab?" | calls `lab state-of`, summarizes |
 | "give me the basin map" | fetches `mosaic.figure(id)`, presents inline |
@@ -81,25 +88,60 @@ Existing patterns that translate:
 
 ### distributary/ — fan-out: planning, dispatch, worktrees
 
+Current authority-bearing implementation lives in
+`watershed-kernel/watershed-distributary/`. This section describes the future
+rim/orchestration surface that may call that crate; it is not an instruction to
+rebuild kernel law in a top-level Python package.
+
 ```
 distributary.compile(plan_dir | spec) -> PlanSpec
 distributary.dispatch(plan: PlanSpec) -> Iterator[Event]
-distributary.kernel(state, event) -> list[DagAction]         # pure state machine
+distributary.kernel(state, event) -> list[DagAction]         # delegates to Rust law
 distributary.governor(plan_id) -> Governor
 distributary.runs.status(run_id) -> DispatchRun
 ```
 
 CLI: `dist compile`, `dist run`, `dist plan create <goal>`, `dist watch`, `dist plan review`, `dist sentrux check`.
 
-Owns existing types from dgov (lift): `PlanSpec`, `PlanUnit`, `PlanUnitFiles`, `PlanIssue`, `DagDefinition`, `DagTaskSpec`, `DagFileSpec`, `RootMeta`, `PlanTree`, `FlatPlan`, the action union (`DispatchTask | ReviewTask | MergeTask | CleanupTask | InterruptGovernor | DagDone`), `TaskState`, `Worktree`, `WorkerExit`. `PlanSpec` carries `sop_set_hash: str` (hash of the bundled worker SOPs — see below); `DagTaskSpec` additionally carries `self_review: bool`, `sop_mapping: tuple[str, ...]`, `max_fork_depth: int`. `ConstitutionalViolation` is the typed exception when a unit edits paths owned by another unit without explicit opt-in.
+Future rim code may adapt existing dgov types: `PlanSpec`, `PlanUnit`, `PlanUnitFiles`, `PlanIssue`, `DagDefinition`, `DagTaskSpec`, `DagFileSpec`, `RootMeta`, `PlanTree`, `FlatPlan`, the action union (`DispatchTask | ReviewTask | MergeTask | CleanupTask | InterruptGovernor | DagDone`), `TaskState`, `Worktree`, `WorkerExit`. `PlanSpec` carries `sop_set_hash: str` (hash of the bundled worker SOPs — see below); `DagTaskSpec` additionally carries `self_review: bool`, `sop_mapping: tuple[str, ...]`, `max_fork_depth: int`. `ConstitutionalViolation` is the typed exception when a unit edits paths owned by another unit without explicit opt-in.
 
-New: `DispatchRun` (see above), `Governor` (today only an implicit concept in `bootstrap_policy.py`).
+New above the kernel only when consumed: `Governor` (today only an implicit concept in `bootstrap_policy.py`) and any rim adapter records needed to call the Rust crate. `DispatchRun`-class authority belongs in the kernel ceremony, not in a parallel Python state machine.
 
-**dgov's split is now half-done.** Since Reach's first survey, `settlement_flow.py` has been pulled out of `runner.py`; `kernel.py` is a 157-line pure state machine; `runner.py` (~676 lines) coordinates kernel + settlement. The active branch `codex/boundary-ownership-cleanup` is doing exactly the boundary work that becomes distributary↔tributary. The remaining piece is a typed `Deposit` emitted at the seam — see `tributary/`.
+**dgov's split is now a Rust-authority/rim split.** Since Reach's first survey, dgov clarified the fan-out/fan-in boundary, and the Rust kernel now owns the lawful-motion substrate. dgov's Python files remain valuable behavioral history and production orchestration, but the watershed lift does not rebuild their state-machine law above the kernel.
 
 **dgov ships a bundled worker-facing SOP set** at `bootstrap_policy_data/sops/` (10 SOPs + `governor.md`: architecture, code-review, error-handling, git-commits, large-file-handling, python-style, refactoring-discipline, return-values, state-modeling-review, testing) plus a `policy_drift.py` that detects bundle change mid-run. **These are distributary-internal — what dispatched workers consume — not lab governance.** They co-exist with watershed's `sops/` (watermaster/lab-facing). Different layers; the boundary needs to be named in any future plan-shape SOP so future watermasters don't conflate `PlanSpec.sop_set_hash` and dgov's policy-drift mechanism with watershed's preflight discipline.
 
+### rivulet/ — side-channel inference for Watermaster thinking
+
+```
+rivulet.submit(request) -> RivuletJob
+rivulet.status(job_id) -> RivuletJob
+rivulet.result(job_id) -> RivuletReturn
+rivulet.cancel(job_id) -> RivuletJob
+rivulet.review_plan(plan_ref | text) -> RivuletReturn
+rivulet.review_thinking(note_ref | text) -> RivuletReturn
+rivulet.critique_brief(brief_ref | text) -> RivuletReturn
+rivulet.summarize(source_ref | text) -> RivuletReturn
+```
+
+Rivulet is the cheap-inference successor to the FirePass researcher/reviewer
+pattern, but with watershed boundaries. It is read-only by default and returns
+advisory evidence to the Watermaster. It does not write files, mint Deposits,
+advance the Rust kernel, or merge work. If a rivulet result implies action, the
+Watermaster compiles that action through the existing typed surfaces: Intent,
+Engineer Brief, Plan, or no action.
+
+Implementation belongs above the kernel: provider adapters, model routing, API
+keys, retries, queues, cancellation, cost tracking, and result storage are rim
+concerns. Do not promote `RivuletJob` or `RivuletReturn` into `shared/` until
+another module consumes them.
+
 ### tributary/ — fan-in: ingest, validate, merge, baseline
+
+Current authority-bearing implementation lives in
+`watershed-kernel/watershed-tributary/`. This section describes future
+rim/orchestration calls around that crate; sentrux, review gates, test
+execution, and worktree settlement remain effects above the kernel.
 
 ```
 tributary.ingest(candidate: IntegrationCandidate) -> Deposit
@@ -110,13 +152,13 @@ tributary.baseline.save(merge_id, branch, name) -> Baseline
 tributary.history(branch, since) -> Iterator[Merge]
 ```
 
-Owns existing types from dgov (lift): `GateResult`, `ReviewResult`, `IntegrationCandidateResult`, `IntegrationCandidateVerdict`, `FailureClass`, `RiskLevel`, `IntegrationRiskRecord`, `SymbolOverlap`, `TextConflict`, `SignatureDrift`, `DuplicateDefinition`.
+Future rim code may adapt existing dgov types: `GateResult`, `ReviewResult`, `IntegrationCandidateResult`, `IntegrationCandidateVerdict`, `FailureClass`, `RiskLevel`, `IntegrationRiskRecord`, `SymbolOverlap`, `TextConflict`, `SignatureDrift`, `DuplicateDefinition`.
 
-**New types it must mint** (the typed seam between distributary and tributary, today implicit):
+**Authority-bearing types now live in Rust** (the typed seam between distributary and tributary):
 
-- `Deposit` — what flows back from a worktree. Closest existing analogue: `IntegrationCandidateResult` (`candidate_path`, `conflict_files`, `merged_commit`) plus the `file_claims` dict from `MergeTask`. The new field that pulls its weight is `claims: tuple[str, ...]` — the typed contracts the agent says it satisfied.
-- `Merge` — a successful integration. Today implicit in events (`MergeCompleted` carries the data; no struct). Fields: `deposit_id`, `validation_id`, `branch`, `merged_commit`, `merged_at`. Baseline points to Merge, not the reverse.
-- `Validation` — unifies what's currently fragmented across `ReviewResult` + `GateResult` + `IntegrationCandidateVerdict`. Carries: `deposit_id`, `pressure_test_results`, `schema_checks`, `semantic_settlement_verdict`, overall verdict ∈ {`pass`, `fail`, `needs_human`}.
+- `Deposit` — what flows back from a completed run. Closest existing analogue: `IntegrationCandidateResult` (`candidate_path`, `conflict_files`, `merged_commit`) plus the `file_claims` dict from `MergeTask`; the authoritative construction path is Rust-side.
+- `Merge` — a successful integration. Baseline points to Merge, not the reverse.
+- `Validation` — unifies what's currently fragmented across `ReviewResult` + `GateResult` + `IntegrationCandidateVerdict`; effectful gates become typed evidence rather than kernel subprocesses.
 - `Baseline` — typed wrapper over the sentrux subprocess: `id`, `sentrux_ref`, `sentrux_content_hash`, `captured_at`, `anchored_to: merge_id`. **Sentrux stays a subprocess; this type is metadata about it, never an importable shim.**
 
 ### quarry/ — connectors, transforms, the untyped→typed boundary
@@ -350,7 +392,7 @@ The asymmetry is load-bearing. Tributary is the first place where a fan-in depos
 
 ## Risks the README glosses over
 
-1. **dgov split is now half-done.** Since the original survey, `settlement_flow.py` has been pulled out of `runner.py`; `kernel.py` is a 157-line pure state machine; `runner.py` (~676 lines) coordinates kernel + settlement. Active branch `codex/boundary-ownership-cleanup` is doing exactly the boundary work that becomes distributary↔tributary. The remaining piece is the typed `Deposit` emitted at the seam — that's new code, not just a `mv`.
+1. **dgov split is now a Rust-authority/rim split.** dgov remains the production Python governor and behavioral mine; watershed-kernel owns the authority-bearing state-machine law. The risk is no longer "move the right files first"; it is accidentally rebuilding Rust-owned law in a future rim layer because a dgov module name looks familiar.
 2. **Two registries.** quarry-registry persists artifacts/runs/checks/lineage in DuckDB. dgov persistence uses SQLite for events. Merging or coexisting is a decision the migration has to make.
 3. **mosaic is the most under-built module.** The Figure/Layer/Basemap/Pass abstractions are genuine new work. tile-ripper's types help but don't reach the figure-binding contract.
 4. **Sentrux is a subprocess, not a library.** Anywhere we type "import sentrux" we are wrong; the actual interface is a subprocess plus `.sentrux/baseline.json`.

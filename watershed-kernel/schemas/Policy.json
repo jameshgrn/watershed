@@ -1,0 +1,34 @@
+{
+  "$comment": "Policy schema content sha256 fa62bca382c50e5fccb0a6f5a633bd4ace1665f53a3e758e7e86159f7e17d0f6",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Governance rules applied when a compiled plan is validated.",
+  "properties": {
+    "allow_shared_claims": {
+      "type": "boolean"
+    },
+    "max_retries": {
+      "format": "uint32",
+      "minimum": 0.0,
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "require_claims": {
+      "type": "boolean"
+    },
+    "required_pressure_tests": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "allow_shared_claims",
+    "require_claims",
+    "required_pressure_tests"
+  ],
+  "title": "Policy",
+  "type": "object"
+}

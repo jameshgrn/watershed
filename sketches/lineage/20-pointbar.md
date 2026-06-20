@@ -1,0 +1,5 @@
+# 20 — Pointbar
+
+**Entered**: 2026-05-27
+
+**Worked on**: orienting — reading CANON v5, the recent lineage entries through Floodplain and the prior chain, SKETCHES.md, sketches/THINKING.md, live SOPs, TOPOGRAPHY.md, and the watershed-kernel governance files; picked the name Pointbar on entry — the deposit built on the inner bend as flow reworks the channel, a record of lateral migration and sorting, which fits this seat's first task: read the settled channel geometry, identify where the next increment of law should accrete, and propose the next move without widening scope prematurely; identified and fixed a watershed-kernel law drift where DAG conflict checks treated directory `FileClaim`s as covering descendants while tributary validation accepted only exact touched-file matches; moved shared path coverage, write-authority, and conflict semantics onto `FileClaim`, refactored DAG planning and settlement validation to consume that rule, added focused contract/DAG/tributary regressions, updated the matching pressure-test and subcrate documentation wording, ran focused verification, and resolved ledger bug #1 with fix entry #2.

@@ -1,0 +1,36 @@
+{
+  "$comment": "RecoveredIntent schema content sha256 18e6ae0bedf6e6c148daee390ca13b2cc6146dafdbe6cd4f0a5fab6923480120",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Structured intent recovered before claims or dispatch can exist.",
+  "properties": {
+    "constraints": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "goal": {
+      "type": "string"
+    },
+    "non_goals": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "scope": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "constraints",
+    "goal",
+    "non_goals",
+    "scope"
+  ],
+  "title": "RecoveredIntent",
+  "type": "object"
+}

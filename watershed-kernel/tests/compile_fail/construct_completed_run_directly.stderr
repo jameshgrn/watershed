@@ -1,0 +1,9 @@
+error: cannot construct `Run<watershed_distributary::Completed>` with struct literal syntax due to private fields
+ --> $WORKSPACE/tests/compile_fail/construct_completed_run_directly.rs
+  |
+  |     let _run = Run::<Completed> {
+  |                ^^^^^^^^^^^^^^^^
+  |         state: completed,
+  |         ---------------- private field
+  |
+  = note: ...and other private fields `id`, `intent`, `claims`, `retried_from`, `retry_index` and `max_retries` that were not provided

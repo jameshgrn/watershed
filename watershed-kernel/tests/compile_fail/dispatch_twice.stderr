@@ -1,0 +1,10 @@
+error[E0382]: use of moved value: `plan`
+ --> $WORKSPACE/tests/compile_fail/dispatch_twice.rs
+  |
+  |     let plan = Plan::<Drafted>::draft()
+  |         ---- move occurs because `plan` has type `Plan<Validated>`, which does not implement the `Copy` trait
+...
+  |     let _first = dispatch(plan);
+  |                           ---- value moved here
+  |     let _second = dispatch(plan);
+  |                            ^^^^ value used here after move
