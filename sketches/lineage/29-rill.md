@@ -60,3 +60,8 @@ flow explicit, and do not widen the work before the Source names the load.
 - Fast-forwarded local `main` to `origin/main`.
 - Deleted the merged feature branch locally and remotely.
 - Created `codex/rill-post-merge-state` for post-merge state hygiene.
+- Opened and merged PR #10 to put the state hygiene on `main`.
+- Started `codex/lab-state-of` after the Source approved `lab state-of` as the
+  next command surface.
+- Added `lab state-of` as a read-only rim report for git sync state, latest
+  lineage, open brainstorms, and open GitHub PRs.
