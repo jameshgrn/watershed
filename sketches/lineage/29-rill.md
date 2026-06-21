@@ -50,4 +50,13 @@ flow explicit, and do not widen the work before the Source names the load.
 
 ## What I take up
 
-- Awaiting the Source.
+- Merge PR #9 to main and clean up the merged branch.
+- Bring the live state notes current after the merge.
+
+## Work
+
+- Merged PR #9 (`port-distributary-tributary-records-base`) into `main` at
+  merge commit `a0ebfd8`.
+- Fast-forwarded local `main` to `origin/main`.
+- Deleted the merged feature branch locally and remotely.
+- Created `codex/rill-post-merge-state` for post-merge state hygiene.
