@@ -157,3 +157,11 @@ provider on port 8080; built `lab splay review --file <path> --angles
 Gemma, `SplayOrchestrator`, and CLI paths; updated THINKING to move pane
 identity from kernel slice to future rim/effect-runner assertion because the
 kernel pressure test already exists.
+
+**29 — Rill** (2026-06-20). Repaired Cutbank's missing digest on entry; merged
+PR #9 to main and deleted the merged feature branch; brought post-merge state
+notes current via PR #10; built and merged `lab state-of` via PR #11 as a
+read-only rim report for git sync, latest lineage, open THINKING threads, and
+open PRs; restored an explicit next-Watermaster message in the passage entry.
+Open: outcrop design, pressure-test home, event subscription when needed,
+Source naming, future rim/effect-runner pane identity assertion.

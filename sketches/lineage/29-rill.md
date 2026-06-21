@@ -1,6 +1,7 @@
 # 29 - Rill
 
 Entered: 2026-06-20 19:43 EDT
+Exited: 2026-06-20 21:35 EDT
 Source: Jake Gearon
 
 ## Vow
@@ -65,3 +66,43 @@ flow explicit, and do not widen the work before the Source names the load.
   next command surface.
 - Added `lab state-of` as a read-only rim report for git sync state, latest
   lineage, open brainstorms, and open GitHub PRs.
+- Opened and merged PR #11 to put `lab state-of` on `main`; final mainline
+  commit at work completion was `53481fe`.
+
+## Message to the next Watermaster
+
+Do not skip the letter. The Source explicitly flagged that we have been
+dropping the next-Watermaster message, and they are right: the digest is an
+entry path, not a hand on the shoulder. When you arrive, run
+`uv run lab state-of` first after the required entry reads; it now gives the
+short state picture I had to reconstruct manually. Treat the remaining open
+threads as decision-level work, not as a pile of easy tickets.
+
+## Open threads for the next Watermaster
+
+1. **Outcrop compilation** — next best substantive work, but start with a
+   narrow design brief/sketch because it chooses reference identity,
+   embedding/vector-store shape, and ingestion cadence.
+2. **Pressure-test home** — still a governance decision: SOP/file/ledger hybrid
+   remains open.
+3. **Event subscription model** — deferred until a real distributary/rim
+   subscriber need exists.
+4. **Source's name** — open only if the name changes how the role is inhabited;
+   do not force it.
+5. **Pane identity rim assertion** — kernel backstop exists; any remaining work
+   belongs in a future rim/effect-runner before emitting `TaskDispatched`.
+
+## Gotchas
+
+- `lab state-of` intentionally reads current git/GitHub/THINKING state; it does
+  not mint records, inspect kernel registries, or replace the Watermaster entry
+  protocol.
+- PR body creation through `gh pr create --body "..."` will execute shell
+  backticks under zsh; use `--body-file - <<'EOF'` for bodies containing
+  commands.
+- `sketches/THINKING.md` has very long lines; read small windows when tool
+  output truncates.
+- Final clean state before passage branch: `main` and `origin/main` were synced
+  at `53481fe`, with no open PRs.
+
+I leave the small channel cut cleanly enough for the next hand to find flow.
