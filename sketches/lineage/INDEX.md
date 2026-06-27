@@ -175,3 +175,12 @@ updated docs, tests, and thinking. Open: effectful pressure-test execution and
 validation evidence remain above the kernel until a rim/effect runner consumes
 them; Rill's broader outcrop, pressure-test home, event subscription, Source
 naming, and future pane-identity threads remain open.
+
+**31 — Chute** (2026-06-27). Inspected Shoal's
+`codex/verification-spec-kernel-seam` branch at `38f5b89`, reran the focused
+kernel gates, pushed it, and opened PR #13 as the clean VerificationSpec kernel
+slice. Continued above the kernel on `codex/verification-effect-runner` with
+`lab verify run`: a rim-side runner that consumes a `VerificationSpec` JSON
+object, executes declared checks from a command manifest, and emits concrete
+JSON evidence. Open: the runner evidence is not yet consumed by tributary;
+settlement-side evidence inspection remains the next lawful promotion point.

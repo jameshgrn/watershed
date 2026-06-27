@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TextIO
 
+from lab.verification import VerificationRunnerError, run_verification
 from splay import Angle, GemmaProvider, SplayJob, SplayOrchestrator, resolve_angles
 from splay.src.providers import FireworksProvider, Provider, ProviderError
 
@@ -44,7 +45,9 @@ def main(
             return _run_state_of(args, out)
         if args.command == "splay" and args.splay_command == "review":
             return _run_splay_review(args, provider, out)
-    except (CliError, ProviderError) as exc:
+        if args.command == "verify" and args.verify_command == "run":
+            return _run_verify(args, out)
+    except (CliError, ProviderError, VerificationRunnerError) as exc:
         print(f"error: {exc}", file=err)
         return 1
 
@@ -99,6 +102,35 @@ def _build_parser() -> argparse.ArgumentParser:
         "--show-raw",
         action="store_true",
         help="Print raw angle summaries after the synthesis.",
+    )
+
+    verify = subcommands.add_parser("verify")
+    verify_subcommands = verify.add_subparsers(dest="verify_command")
+
+    run = verify_subcommands.add_parser("run")
+    run.add_argument(
+        "--spec",
+        required=True,
+        help="Path to a VerificationSpec JSON object with a checks list.",
+    )
+    run.add_argument(
+        "--manifest",
+        required=True,
+        help="Path to a rim-side command manifest for declared checks.",
+    )
+    run.add_argument(
+        "--root",
+        default=".",
+        help="Repository root used to resolve manifest cwd entries.",
+    )
+    run.add_argument(
+        "--evidence",
+        help="Optional path to write the emitted verification evidence JSON.",
+    )
+    run.add_argument(
+        "--pretty",
+        action="store_true",
+        help="Pretty-print emitted evidence JSON.",
     )
     return parser
 
@@ -205,6 +237,26 @@ def _run_splay_review(
             print("\n".join(summary.key_findings), file=out)
 
     return 0
+
+
+def _run_verify(args: argparse.Namespace, out: TextIO) -> int:
+    evidence = run_verification(
+        spec_path=Path(args.spec),
+        manifest_path=Path(args.manifest),
+        root=Path(args.root),
+    )
+    rendered = evidence.to_json(indent=2 if args.pretty else None)
+
+    if args.evidence:
+        evidence_path = Path(args.evidence)
+        evidence_path.parent.mkdir(parents=True, exist_ok=True)
+        evidence_path.write_text(rendered + "\n", encoding="utf-8")
+        print(f"Evidence: {evidence_path}", file=out)
+        print(f"Verdict: {evidence.verdict}", file=out)
+    else:
+        print(rendered, file=out)
+
+    return 0 if evidence.verdict == "pass" else 1
 
 
 def _validate_context_refs(files: Sequence[str]) -> list[str]:
