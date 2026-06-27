@@ -8,6 +8,8 @@ SettlementSealed is enforced by `tests/compile_fail/construct_merge_from_distrib
 
 CeremonyIsOrdered is enforced by `tests/compile_fail/skip_intent_recovery.rs`. The rule is that claims cannot be declared before intent recovery, so the outbound ceremony cannot skip or reorder the required states.
 
+CompileRequiresVerification is enforced by `tests/compile_fail/compile_without_verification.rs`. The rule is that a claims-declared plan cannot compile until it declares a `VerificationSpec`; verification is part of the legal outbound ceremony before policy validation and dispatch.
+
 WorkerProducesDeposit is enforced by `tests/compile_fail/construct_completed_run_directly.rs`. The rule is that `Run<Completed>` cannot be constructed directly outside `watershed-distributary`, because completed runs represent worker-produced deposits.
 
 DepositConstructorSealed is enforced by `tests/compile_fail/construct_deposit_directly.rs`. The rule is that authoritative `Deposit` records are owned by `watershed-distributary`, are created only by completed-run motion, and cannot be constructed directly by outside crates.
@@ -38,7 +40,7 @@ dag_task_slugs_reject_padding is enforced by `watershed-distributary/tests/dag_p
 
 deposit_ids_are_derived is enforced by `watershed-distributary/tests/worker_lifecycle.rs`. The rule is that authoritative `Deposit` records receive content-derived `deposit:` ids from the producing run id, summary, and canonical sorted touched files. Equivalent completed runs with the same touched files in a different input order or current-directory spelling produce equal deposit ids.
 
-required_pressure_tests_are_registered is enforced by `watershed-distributary/tests/policy_pressure_tests.rs`. The rule is that `Plan<Compiled>::validate(...)` rejects any `Policy.required_pressure_tests` name absent from the `pressure_tests()` registry. This validates names only; it does not run tests, schedule tests, or add an effect layer.
+required_pressure_tests_are_registered is enforced by `watershed-distributary/tests/policy_pressure_tests.rs`. The rule is that `Plan<Compiled>::validate(...)` rejects any `VerificationSpec` check name or `Policy.required_pressure_tests` name absent from the `pressure_tests()` registry, and rejects any policy-required pressure test that the plan did not declare in its `VerificationSpec`. This validates names only; it does not run tests, schedule tests, or add an effect layer.
 
 pressure_test_registry_self_consistent is enforced by `watershed-contracts/src/lib.rs`. The rule is that the pressure-test registry is itself well-formed: trimmed names are non-empty and unique, trimmed claims are non-empty, and every `enforced_by` path is non-empty and resolves to a file inside the workspace.
 

@@ -1,20 +1,18 @@
-error[E0451]: fields `intent`, `claims` and `max_retries` of struct `Validated` are private
+error: cannot construct `Validated` with struct literal syntax due to private fields
  --> $WORKSPACE/tests/compile_fail/construct_validated_plan_directly.rs
   |
-  |     let validated = Validated {
-  |                     --------- in this type
-  |         intent: RecoveredIntent {
-  |         ^^^^^^ private field
-...
-  |         claims: Vec::new(),
-  |         ^^^^^^ private field
-  |         max_retries: None,
-  |         ^^^^^^^^^^^ private field
-
-error[E0451]: field `state` of struct `Plan` is private
- --> $WORKSPACE/tests/compile_fail/construct_validated_plan_directly.rs
+  |       let validated = Validated {
+  |                       ^^^^^^^^^
+  | /         intent: RecoveredIntent {
+  | |             goal: "skip ceremony".to_owned(),
+  | |             scope: Vec::new(),
+  | |             constraints: Vec::new(),
+  | |             non_goals: Vec::new(),
+  | |         },
+  | |_________- private field
+  |           claims: Vec::new(),
+  |           ------------------ private field
+  |           max_retries: None,
+  |           ----------------- private field
   |
-  |     let _plan = Plan::<Validated> {
-  |                 ----------------- in this type
-  |         state: validated,
-  |         ^^^^^ private field
+  = note: ...and other private field `verification` that was not provided

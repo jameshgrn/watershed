@@ -165,3 +165,13 @@ read-only rim report for git sync, latest lineage, open THINKING threads, and
 open PRs; restored an explicit next-Watermaster message in the passage entry.
 Open: outcrop design, pressure-test home, event subscription when needed,
 Source naming, future rim/effect-runner pane identity assertion.
+
+**30 — Shoal** (2026-06-27). Promoted `VerificationSpec` through the
+distributary/tributary kernel seam: plans must declare verification before
+compile, policy validation name-checks declared and required pressure tests,
+runs carry the spec into identity and collection, and tributary validation
+rejects empty or unknown specs. Added `compile_requires_verification` and
+updated docs, tests, and thinking. Open: effectful pressure-test execution and
+validation evidence remain above the kernel until a rim/effect runner consumes
+them; Rill's broader outcrop, pressure-test home, event subscription, Source
+naming, and future pane-identity threads remain open.

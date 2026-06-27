@@ -1,0 +1,14 @@
+error[E0599]: no method named `compile` found for struct `Plan<ClaimsDeclared>` in the current scope
+ --> $WORKSPACE/tests/compile_fail/compile_without_verification.rs
+  |
+  |       let _compiled = Plan::<Drafted>::draft()
+  |  _____________________-
+  | |         .recover_intent(intent)
+  | |         .declare_claims(claims)
+  | |         .compile();
+  | |         -^^^^^^^ method not found in `Plan<ClaimsDeclared>`
+  | |_________|
+  |
+  |
+  = note: the method was found for
+          - `Plan<VerificationDeclared>`

@@ -4,7 +4,7 @@ This workspace is the Rust kernel for the watershed dispatcher.
 
 It defines typed contracts, a pure DAG event kernel, and the lawful motion that moves work from planned dispatch to settled baseline.
 
-It is intentionally in-memory: no subprocesses, no worktrees, no registry persistence, and no real validation gates.
+It is intentionally in-memory: no subprocesses, no worktrees, no registry persistence, and no real validation gate execution. Verification checks are declared and name-checked; effectful execution belongs above the kernel.
 
 ## Workspace Split
 
@@ -32,7 +32,7 @@ Keep verification scoped to the changed surface. Common gates:
 cargo fmt --all -- --check
 cargo clippy -p watershed-contracts -p watershed-distributary -p watershed-tributary --all-targets -- -D warnings
 cargo test -p watershed-contracts
-cargo test -p watershed-distributary --test dag_kernel --test dag_plan --test worker_lifecycle --test lawful_motion
+cargo test -p watershed-distributary --test dag_kernel --test dag_plan --test worker_lifecycle --test lawful_motion --test policy_pressure_tests --test retry_budget --test retry_lineage --test run_id_identity
 cargo test -p watershed-tributary --test claims_integrity --test record_identity --test lawful_motion --test constitutional
 cargo xtask schemas
 ```
@@ -58,4 +58,4 @@ The kernel does not dispatch real workers, create git worktrees, manage panes,
 persist a registry, expose a CLI, provide a scheduler service, or define a
 policy language.
 
-The kernel keeps deferred contract types out of `Plan` until a transition proves them and a later transition consumes them.
+The kernel keeps deferred contract types out of `Plan` until a transition proves them and a later transition consumes them. `VerificationSpec` is now promoted because `Plan` declares it, `Run` carries it, and tributary validation consumes it.

@@ -221,6 +221,7 @@ pub const MERGE_DONE_REJECTS_OPTIONAL_ERROR: &str = "merge_done_rejects_optional
 pub const CONSTRUCT_DEPOSIT_DIRECTLY: &str = "construct_deposit_directly";
 pub const DEPOSIT_IDS_ARE_DERIVED: &str = "deposit_ids_are_derived";
 pub const REQUIRED_PRESSURE_TESTS_ARE_REGISTERED: &str = "required_pressure_tests_are_registered";
+pub const COMPILE_REQUIRES_VERIFICATION: &str = "compile_requires_verification";
 pub const PRESSURE_TEST_REGISTRY_SELF_CONSISTENT: &str = "pressure_test_registry_self_consistent";
 pub const FILE_CLAIM_PATHS_REJECT_ESCAPE_FORMS: &str = "file_claim_paths_reject_escape_forms";
 
@@ -368,8 +369,13 @@ pub fn pressure_tests() -> Vec<PressureTest> {
         },
         PressureTest {
             name: REQUIRED_PRESSURE_TESTS_ARE_REGISTERED.to_owned(),
-            claim: "compiled plan validation rejects policy-required pressure test names that are not registered".to_owned(),
+            claim: "compiled plan validation rejects unknown verification checks, unknown policy-required pressure tests, and policy-required tests not declared by the plan".to_owned(),
             enforced_by: "watershed-distributary/tests/policy_pressure_tests.rs".to_owned(),
+        },
+        PressureTest {
+            name: COMPILE_REQUIRES_VERIFICATION.to_owned(),
+            claim: "plans cannot compile until they declare a verification spec".to_owned(),
+            enforced_by: "tests/compile_fail/compile_without_verification.rs".to_owned(),
         },
         PressureTest {
             name: PRESSURE_TEST_REGISTRY_SELF_CONSISTENT.to_owned(),

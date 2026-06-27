@@ -1,5 +1,7 @@
 use std::path::PathBuf;
-use watershed_contracts::{ClaimKind, FileClaim, Policy, RecoveredIntent};
+use watershed_contracts::{
+    ClaimKind, FileClaim, Policy, RecoveredIntent, VerificationSpec, DEPOSIT_IDS_ARE_DERIVED,
+};
 use watershed_distributary::{collect, dispatch, Deposit, Drafted, Plan};
 use watershed_tributary::{baseline, merge, validate, Validation};
 
@@ -7,6 +9,12 @@ fn claim(path: &str, kind: ClaimKind) -> FileClaim {
     FileClaim {
         path: PathBuf::from(path),
         kind,
+    }
+}
+
+fn verification() -> VerificationSpec {
+    VerificationSpec {
+        checks: vec![DEPOSIT_IDS_ARE_DERIVED.to_owned()],
     }
 }
 
@@ -26,12 +34,13 @@ fn deposit(summary: &str, touched_files: Vec<PathBuf>, claims: Vec<FileClaim>) -
     let plan = Plan::<Drafted>::draft()
         .recover_intent(intent)
         .declare_claims(claims)
+        .declare_verification(verification())
         .compile()
         .expect("claims should compile")
         .validate(&policy)
         .expect("policy should validate");
     let completed = dispatch(plan).start().complete(summary, touched_files);
-    let (deposit, _claims) = collect(completed);
+    let (deposit, _claims, _verification) = collect(completed);
 
     deposit
 }
@@ -63,7 +72,7 @@ fn accepted_validation_id_starts_with_validation_prefix() {
         claims.clone(),
     );
 
-    let validation = validate(deposit, &claims);
+    let validation = validate(deposit, &claims, &verification());
     let Validation::Accepted(accepted) = validation else {
         panic!("deposit should be accepted");
     };
@@ -88,8 +97,8 @@ fn accepted_validation_id_is_stable_for_equivalent_deposits() {
         claim("b.rs", ClaimKind::Exclusive),
     ];
 
-    let first_validation = validate(first, &claims);
-    let second_validation = validate(second, &claims);
+    let first_validation = validate(first, &claims, &verification());
+    let second_validation = validate(second, &claims, &verification());
 
     let Validation::Accepted(first_accepted) = first_validation else {
         panic!("first deposit should be accepted");
@@ -110,7 +119,7 @@ fn rejected_validation_id_starts_with_validation_prefix() {
     let claims = vec![claim("a.rs", ClaimKind::Exclusive)];
     let deposit = deposit("", vec![PathBuf::from("a.rs")], claims.clone());
 
-    let validation = validate(deposit, &claims);
+    let validation = validate(deposit, &claims, &verification());
     let Validation::Rejected(rejected) = validation else {
         panic!("deposit with empty summary should be rejected");
     };
@@ -127,8 +136,8 @@ fn rejected_validation_id_is_stable_for_equivalent_rejections() {
     let first = deposit("", vec![PathBuf::from("a.rs")], claims.clone());
     let second = deposit("", vec![PathBuf::from("a.rs")], claims.clone());
 
-    let first_validation = validate(first, &claims);
-    let second_validation = validate(second, &claims);
+    let first_validation = validate(first, &claims, &verification());
+    let second_validation = validate(second, &claims, &verification());
 
     let Validation::Rejected(first_rejected) = first_validation else {
         panic!("first empty-summary deposit should be rejected");
@@ -157,7 +166,7 @@ fn merge_id_starts_with_merge_prefix() {
         claims.clone(),
     );
 
-    let validation = validate(deposit, &claims);
+    let validation = validate(deposit, &claims, &verification());
     let Validation::Accepted(accepted) = validation else {
         panic!("deposit should be accepted");
     };
@@ -179,7 +188,7 @@ fn merge_id_cites_accepted_validation_id() {
         claims.clone(),
     );
 
-    let validation = validate(deposit, &claims);
+    let validation = validate(deposit, &claims, &verification());
     let Validation::Accepted(accepted) = validation else {
         panic!("deposit should be accepted");
     };
@@ -202,8 +211,8 @@ fn merge_id_is_stable_for_equivalent_validations() {
         claim("b.rs", ClaimKind::Exclusive),
     ];
 
-    let first_validation = validate(first, &claims);
-    let second_validation = validate(second, &claims);
+    let first_validation = validate(first, &claims, &verification());
+    let second_validation = validate(second, &claims, &verification());
 
     let Validation::Accepted(first_accepted) = first_validation else {
         panic!("first deposit should be accepted");
@@ -231,7 +240,7 @@ fn baseline_id_starts_with_baseline_prefix() {
         claims.clone(),
     );
 
-    let validation = validate(deposit, &claims);
+    let validation = validate(deposit, &claims, &verification());
     let Validation::Accepted(accepted) = validation else {
         panic!("deposit should be accepted");
     };
@@ -253,8 +262,8 @@ fn baseline_id_is_stable_for_equivalent_merges() {
         claim("b.rs", ClaimKind::Exclusive),
     ];
 
-    let first_validation = validate(first, &claims);
-    let second_validation = validate(second, &claims);
+    let first_validation = validate(first, &claims, &verification());
+    let second_validation = validate(second, &claims, &verification());
 
     let Validation::Accepted(first_accepted) = first_validation else {
         panic!("first deposit should be accepted");

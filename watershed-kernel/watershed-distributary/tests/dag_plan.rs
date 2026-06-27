@@ -1,6 +1,8 @@
 use std::path::PathBuf;
 
-use watershed_contracts::{ClaimKind, FileClaim, Policy, RecoveredIntent};
+use watershed_contracts::{
+    ClaimKind, FileClaim, Policy, RecoveredIntent, VerificationSpec, DEPOSIT_IDS_ARE_DERIVED,
+};
 use watershed_distributary::dag::{
     DagAction, DagError, DagEvent, DagPlan, DagTask, TaskDispatched, TaskMergeDone,
     TaskMergeOutcome, TaskReviewDone, TaskReviewOutcome, TaskWaitDone, TaskWaitOutcome,
@@ -146,6 +148,9 @@ fn plan_compile_rejects_escape_claim_paths() {
     let err = Plan::<Drafted>::draft()
         .recover_intent(intent)
         .declare_claims(claims)
+        .declare_verification(VerificationSpec {
+            checks: vec![DEPOSIT_IDS_ARE_DERIVED.to_owned()],
+        })
         .compile()
         .expect_err("claim path escapes should not compile");
 
@@ -324,13 +329,16 @@ fn dag_dispatch_feeds_existing_plan_run_collection_ceremony() {
     let plan = Plan::<Drafted>::draft()
         .recover_intent(intent)
         .declare_claims(task.claims().to_vec())
+        .declare_verification(VerificationSpec {
+            checks: vec![DEPOSIT_IDS_ARE_DERIVED.to_owned()],
+        })
         .compile()
         .expect("task claims should compile")
         .validate(&policy)
         .expect("policy should validate");
     let pending = dispatch(plan);
     let completed = mock_worker(pending.start());
-    let (deposit, dispatch_claims) = collect(completed);
+    let (deposit, dispatch_claims, _verification) = collect(completed);
 
     kernel.handle(DagEvent::TaskDispatched(TaskDispatched {
         task_slug: "root".to_owned(),
