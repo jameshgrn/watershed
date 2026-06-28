@@ -2,7 +2,7 @@
 
 2026-05-22: WorkClass-in-Plan is deferred until policy consumes it. Promote when a transition uses `WorkClass` to gate or branch behavior.
 
-2026-05-22: VerificationSpec-in-Plan is deferred until validation consumes it. Promote via a `declare_verification` transition when tributary validation actually checks against `VerificationSpec`.
+2026-06-27: VerificationSpec-in-Plan was promoted. `Plan<ClaimsDeclared>` now must declare a `VerificationSpec` before compile, `Plan<Compiled>::validate` checks declared names and policy-required names, `Run` carries the spec, `collect` returns it, and tributary `validate` rejects empty or unknown verification specs.
 
 2026-05-22: RollbackSpec-in-Plan is deferred. It likely belongs near settlement or dispatch safety. Promote when a real rollback path is added.
 
@@ -27,7 +27,8 @@ transition consumes it:
   changes instead of canonical touched paths.
 - Validation evidence: schema pins, check verdicts, known-claim sets, and
   human-judgment verdicts. Promote only when tributary validation consumes
-  `VerificationSpec` or concrete check evidence.
+  concrete check evidence. `VerificationSpec` name declaration is already
+  promoted; effectful check execution still belongs above the kernel.
 - Merge evidence: merge mode, merged commit, validation id cross-checks against
   an external registry, and validated-deposit state checks. Promote only when a
   real settlement layer consumes merge evidence, not while `Merge` remains an

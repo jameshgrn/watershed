@@ -1,5 +1,7 @@
 use std::path::PathBuf;
-use watershed_contracts::{ClaimKind, FileClaim, Policy, RecoveredIntent};
+use watershed_contracts::{
+    ClaimKind, FileClaim, Policy, RecoveredIntent, VerificationSpec, DEPOSIT_IDS_ARE_DERIVED,
+};
 use watershed_distributary::{dispatch, Drafted, Plan};
 
 fn main() {
@@ -23,6 +25,9 @@ fn main() {
         Plan::<Drafted>::draft()
             .recover_intent(intent)
             .declare_claims(claims)
+            .declare_verification(VerificationSpec {
+                checks: vec![DEPOSIT_IDS_ARE_DERIVED.to_owned()],
+            })
             .compile()
             .expect("compile")
             .validate(&policy)

@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use thiserror::Error;
 use watershed_contracts::{
     pressure_tests, ClaimKind, FileClaim, FileClaimPathError, Policy, RecoveredIntent,
+    VerificationSpec,
 };
 
 mod sealed {
@@ -34,11 +35,20 @@ pub struct ClaimsDeclared {
     claims: Vec<FileClaim>,
 }
 
+/// A plan whose verification checks have been declared.
+#[derive(Debug, Clone)]
+pub struct VerificationDeclared {
+    intent: RecoveredIntent,
+    claims: Vec<FileClaim>,
+    verification: VerificationSpec,
+}
+
 /// A plan that has passed compilation checks.
 #[derive(Debug, Clone)]
 pub struct Compiled {
     intent: RecoveredIntent,
     claims: Vec<FileClaim>,
+    verification: VerificationSpec,
 }
 
 /// A plan that has passed policy validation and may be dispatched.
@@ -46,18 +56,21 @@ pub struct Compiled {
 pub struct Validated {
     intent: RecoveredIntent,
     claims: Vec<FileClaim>,
+    verification: VerificationSpec,
     max_retries: Option<u32>,
 }
 
 impl sealed::Sealed for Drafted {}
 impl sealed::Sealed for IntentRecovered {}
 impl sealed::Sealed for ClaimsDeclared {}
+impl sealed::Sealed for VerificationDeclared {}
 impl sealed::Sealed for Compiled {}
 impl sealed::Sealed for Validated {}
 
 impl PlanState for Drafted {}
 impl PlanState for IntentRecovered {}
 impl PlanState for ClaimsDeclared {}
+impl PlanState for VerificationDeclared {}
 impl PlanState for Compiled {}
 impl PlanState for Validated {}
 
@@ -101,8 +114,40 @@ impl Plan<ClaimsDeclared> {
         &self.state.claims
     }
 
-    pub fn compile(self) -> Result<Plan<Compiled>, CompileError> {
+    pub fn declare_verification(
+        self,
+        verification: VerificationSpec,
+    ) -> Plan<VerificationDeclared> {
         let ClaimsDeclared { intent, claims } = self.state;
+        Plan {
+            state: VerificationDeclared {
+                intent,
+                claims,
+                verification,
+            },
+        }
+    }
+}
+
+impl Plan<VerificationDeclared> {
+    pub fn intent(&self) -> &RecoveredIntent {
+        &self.state.intent
+    }
+
+    pub fn claims(&self) -> &[FileClaim] {
+        &self.state.claims
+    }
+
+    pub fn verification(&self) -> &VerificationSpec {
+        &self.state.verification
+    }
+
+    pub fn compile(self) -> Result<Plan<Compiled>, CompileError> {
+        let VerificationDeclared {
+            intent,
+            claims,
+            verification,
+        } = self.state;
 
         if claims.is_empty() {
             return Err(CompileError::MissingClaims);
@@ -111,7 +156,11 @@ impl Plan<ClaimsDeclared> {
         let claims = canonicalize_plan_claims(claims)?;
 
         Ok(Plan {
-            state: Compiled { intent, claims },
+            state: Compiled {
+                intent,
+                claims,
+                verification,
+            },
         })
     }
 }
@@ -125,8 +174,16 @@ impl Plan<Compiled> {
         &self.state.claims
     }
 
+    pub fn verification(&self) -> &VerificationSpec {
+        &self.state.verification
+    }
+
     pub fn validate(self, policy: &Policy) -> Result<Plan<Validated>, ValidationError> {
-        let Compiled { intent, claims } = self.state;
+        let Compiled {
+            intent,
+            claims,
+            verification,
+        } = self.state;
 
         if policy.require_claims && claims.is_empty() {
             return Err(ValidationError::MissingClaims);
@@ -140,12 +197,14 @@ impl Plan<Compiled> {
             return Err(ValidationError::SharedClaimsForbidden);
         }
 
-        validate_required_pressure_tests(&policy.required_pressure_tests)?;
+        validate_verification_spec(&verification)?;
+        validate_required_pressure_tests(&policy.required_pressure_tests, &verification)?;
 
         Ok(Plan {
             state: Validated {
                 intent,
                 claims,
+                verification,
                 max_retries: policy.max_retries,
             },
         })
@@ -159,6 +218,10 @@ impl Plan<Validated> {
 
     pub fn claims(&self) -> &[FileClaim] {
         &self.state.claims
+    }
+
+    pub fn verification(&self) -> &VerificationSpec {
+        &self.state.verification
     }
 }
 
@@ -181,8 +244,14 @@ pub enum ValidationError {
     MissingClaims,
     #[error("policy forbids shared file claims")]
     SharedClaimsForbidden,
+    #[error("verification spec must declare at least one check")]
+    MissingVerificationChecks,
+    #[error("verification spec names unknown pressure test '{name}'")]
+    UnknownVerificationCheck { name: String },
     #[error("policy requires unknown pressure test '{name}'")]
     UnknownPressureTest { name: String },
+    #[error("policy requires pressure test '{name}' but the plan did not declare it")]
+    MissingRequiredVerification { name: String },
 }
 
 /// Errors raised while retrying a failed run.
@@ -283,14 +352,43 @@ fn canonicalize_plan_claims(claims: Vec<FileClaim>) -> Result<Vec<FileClaim>, Co
         .collect()
 }
 
-fn validate_required_pressure_tests(required: &[String]) -> Result<(), ValidationError> {
+fn validate_verification_spec(verification: &VerificationSpec) -> Result<(), ValidationError> {
+    if verification.checks.is_empty() {
+        return Err(ValidationError::MissingVerificationChecks);
+    }
+
     let registered = pressure_tests()
         .into_iter()
         .map(|test| test.name)
         .collect::<BTreeSet<_>>();
 
+    if let Some(name) = verification
+        .checks
+        .iter()
+        .find(|name| !registered.contains(*name))
+    {
+        return Err(ValidationError::UnknownVerificationCheck { name: name.clone() });
+    }
+
+    Ok(())
+}
+
+fn validate_required_pressure_tests(
+    required: &[String],
+    verification: &VerificationSpec,
+) -> Result<(), ValidationError> {
+    let registered = pressure_tests()
+        .into_iter()
+        .map(|test| test.name)
+        .collect::<BTreeSet<_>>();
+    let declared = verification.checks.iter().collect::<BTreeSet<_>>();
+
     if let Some(name) = required.iter().find(|name| !registered.contains(*name)) {
         return Err(ValidationError::UnknownPressureTest { name: name.clone() });
+    }
+
+    if let Some(name) = required.iter().find(|name| !declared.contains(*name)) {
+        return Err(ValidationError::MissingRequiredVerification { name: name.clone() });
     }
 
     Ok(())
@@ -339,6 +437,7 @@ pub struct Run<S: RunState> {
     id: String,
     intent: RecoveredIntent,
     claims: Vec<FileClaim>,
+    verification: VerificationSpec,
     retried_from: Option<String>,
     retry_index: u32,
     max_retries: Option<u32>,
@@ -358,6 +457,10 @@ impl<S: RunState> Run<S> {
         &self.claims
     }
 
+    pub fn verification(&self) -> &VerificationSpec {
+        &self.verification
+    }
+
     pub fn retried_from(&self) -> Option<&str> {
         self.retried_from.as_deref()
     }
@@ -373,6 +476,7 @@ impl Run<Pending> {
             id,
             intent,
             claims,
+            verification,
             retried_from,
             retry_index,
             max_retries,
@@ -383,6 +487,7 @@ impl Run<Pending> {
             id,
             intent,
             claims,
+            verification,
             retried_from,
             retry_index,
             max_retries,
@@ -401,6 +506,7 @@ impl Run<Running> {
             id,
             intent,
             claims,
+            verification,
             retried_from,
             retry_index,
             max_retries,
@@ -412,6 +518,7 @@ impl Run<Running> {
             id,
             intent,
             claims,
+            verification,
             retried_from,
             retry_index,
             max_retries,
@@ -424,6 +531,7 @@ impl Run<Running> {
             id,
             intent,
             claims,
+            verification,
             retried_from,
             retry_index,
             max_retries,
@@ -434,6 +542,7 @@ impl Run<Running> {
             id,
             intent,
             claims,
+            verification,
             retried_from,
             retry_index,
             max_retries,
@@ -454,6 +563,7 @@ impl Run<Failed> {
             id,
             intent,
             claims,
+            verification,
             retry_index,
             max_retries,
             ..
@@ -472,12 +582,19 @@ impl Run<Failed> {
         let retry_index = retry_index
             .checked_add(1)
             .expect("retry_index exceeded u32::MAX; start a new dispatch instead of retrying");
-        let id = derive_run_id(&intent, &claims, retried_from.as_deref(), retry_index);
+        let id = derive_run_id(
+            &intent,
+            &claims,
+            &verification,
+            retried_from.as_deref(),
+            retry_index,
+        );
 
         Ok(Run {
             id,
             intent,
             claims,
+            verification,
             retried_from,
             retry_index,
             max_retries,
@@ -491,6 +608,7 @@ impl Run<Failed> {
 pub fn derive_run_id(
     intent: &RecoveredIntent,
     claims: &[FileClaim],
+    verification: &VerificationSpec,
     retried_from: Option<&str>,
     retry_index: u32,
 ) -> String {
@@ -499,6 +617,8 @@ pub fn derive_run_id(
     let claims = canonicalize_claims_for_identity(claims);
     let serialized_claims =
         serde_json::to_vec(&claims).expect("FileClaim serialization should be infallible");
+    let serialized_verification = serde_json::to_vec(verification)
+        .expect("VerificationSpec serialization should be infallible");
     let serialized_retried_from = serde_json::to_vec(&retried_from)
         .expect("retry lineage serialization should be infallible");
 
@@ -506,6 +626,7 @@ pub fn derive_run_id(
     hasher.update(b"run:");
     hasher.update(serialized_intent);
     hasher.update(serialized_claims);
+    hasher.update(serialized_verification);
     hasher.update(serialized_retried_from);
     hasher.update(retry_index.to_be_bytes());
     let digest = hasher.finalize();
@@ -524,13 +645,15 @@ pub fn dispatch(plan: Plan<Validated>) -> Run<Pending> {
     let Validated {
         intent,
         claims,
+        verification,
         max_retries,
     } = plan.state;
-    let run_id = derive_run_id(&intent, &claims, None, 0);
+    let run_id = derive_run_id(&intent, &claims, &verification, None, 0);
     Run {
         id: run_id,
         intent,
         claims,
+        verification,
         retried_from: None,
         retry_index: 0,
         max_retries,
@@ -548,9 +671,14 @@ pub fn mock_worker(run: Run<Running>) -> Run<Completed> {
     run.complete("synthetic deposit", touched_files)
 }
 
-pub fn collect(run: Run<Completed>) -> (Deposit, Vec<FileClaim>) {
-    let Run { claims, state, .. } = run;
+pub fn collect(run: Run<Completed>) -> (Deposit, Vec<FileClaim>, VerificationSpec) {
+    let Run {
+        claims,
+        verification,
+        state,
+        ..
+    } = run;
     let Completed { deposit } = state;
 
-    (deposit, claims)
+    (deposit, claims, verification)
 }

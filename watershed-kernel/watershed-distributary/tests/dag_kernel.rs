@@ -424,7 +424,7 @@ fn dispatched_event_rejects_malformed_pane_slug() {
         let actions = kernel.handle(dispatched("a", malformed));
 
         assert_eq!(kernel.task_state("a"), Some(TaskState::Pending));
-        assert!(kernel.snapshot().task_panes.get("a").is_none());
+        assert!(!kernel.snapshot().task_panes.contains_key("a"));
         assert!(actions.is_empty());
     }
 

@@ -1,5 +1,7 @@
 use std::path::PathBuf;
-use watershed_contracts::{ClaimKind, FileClaim, Policy, RecoveredIntent};
+use watershed_contracts::{
+    ClaimKind, FileClaim, Policy, RecoveredIntent, VerificationSpec, DEPOSIT_IDS_ARE_DERIVED,
+};
 use watershed_distributary::{collect, dispatch, Deposit, Drafted, Plan};
 use watershed_tributary::{validate, Validation};
 
@@ -7,6 +9,12 @@ fn claim(path: &str, kind: ClaimKind) -> FileClaim {
     FileClaim {
         path: PathBuf::from(path),
         kind,
+    }
+}
+
+fn verification() -> VerificationSpec {
+    VerificationSpec {
+        checks: vec![DEPOSIT_IDS_ARE_DERIVED.to_owned()],
     }
 }
 
@@ -26,12 +34,13 @@ fn deposit(summary: &str, touched_files: Vec<PathBuf>, claims: Vec<FileClaim>) -
     let plan = Plan::<Drafted>::draft()
         .recover_intent(intent)
         .declare_claims(claims)
+        .declare_verification(verification())
         .compile()
         .expect("claims should compile")
         .validate(&policy)
         .expect("policy should validate");
     let completed = dispatch(plan).start().complete(summary, touched_files);
-    let (deposit, _claims) = collect(completed);
+    let (deposit, _claims, _verification) = collect(completed);
 
     deposit
 }
@@ -45,7 +54,7 @@ fn rejects_deposit_touched_outside_write_authority() {
         claims.clone(),
     );
 
-    let validation = validate(deposit, &claims);
+    let validation = validate(deposit, &claims, &verification());
 
     let Validation::Rejected(rejected) = validation else {
         panic!("deposit touching an unclaimed file should be rejected");
@@ -58,6 +67,49 @@ fn rejects_deposit_touched_outside_write_authority() {
 }
 
 #[test]
+fn rejects_empty_verification_spec() {
+    let claims = vec![claim("a.rs", ClaimKind::Exclusive)];
+    let deposit = deposit(
+        "synthetic deposit",
+        vec![PathBuf::from("a.rs")],
+        claims.clone(),
+    );
+    let empty = VerificationSpec { checks: Vec::new() };
+
+    let validation = validate(deposit, &claims, &empty);
+
+    let Validation::Rejected(rejected) = validation else {
+        panic!("empty verification spec should be rejected");
+    };
+
+    assert_eq!(rejected.reason(), "verification spec declares no checks");
+}
+
+#[test]
+fn rejects_unknown_verification_check() {
+    let claims = vec![claim("a.rs", ClaimKind::Exclusive)];
+    let deposit = deposit(
+        "synthetic deposit",
+        vec![PathBuf::from("a.rs")],
+        claims.clone(),
+    );
+    let unknown = VerificationSpec {
+        checks: vec!["missing_pressure_test".to_owned()],
+    };
+
+    let validation = validate(deposit, &claims, &unknown);
+
+    let Validation::Rejected(rejected) = validation else {
+        panic!("unknown verification check should be rejected");
+    };
+
+    assert_eq!(
+        rejected.reason(),
+        "verification spec names unknown check 'missing_pressure_test'"
+    );
+}
+
+#[test]
 fn accepts_deposit_touched_within_plan_claims() {
     let claims = vec![claim("a.rs", ClaimKind::Exclusive)];
     let deposit = deposit(
@@ -66,7 +118,7 @@ fn accepts_deposit_touched_within_plan_claims() {
         claims.clone(),
     );
 
-    let validation = validate(deposit, &claims);
+    let validation = validate(deposit, &claims, &verification());
 
     let Validation::Accepted(accepted) = validation else {
         panic!("deposit touching only claimed files should be accepted");
@@ -84,7 +136,7 @@ fn accepts_deposit_touched_under_directory_write_claim() {
         claims.clone(),
     );
 
-    let validation = validate(deposit, &claims);
+    let validation = validate(deposit, &claims, &verification());
 
     let Validation::Accepted(accepted) = validation else {
         panic!("directory claim should authorize descendant paths");
@@ -102,7 +154,7 @@ fn rejects_deposit_touched_under_read_only_claim() {
         claims.clone(),
     );
 
-    let validation = validate(deposit, &claims);
+    let validation = validate(deposit, &claims, &verification());
 
     let Validation::Rejected(rejected) = validation else {
         panic!("read-only claim should not authorize touched files");
@@ -123,7 +175,7 @@ fn rejects_sibling_paths_outside_directory_claim() {
         claims.clone(),
     );
 
-    let validation = validate(deposit, &claims);
+    let validation = validate(deposit, &claims, &verification());
 
     let Validation::Rejected(rejected) = validation else {
         panic!("directory claim should not authorize sibling paths");
@@ -144,7 +196,7 @@ fn rejects_deposit_touched_escape_path() {
         claims.clone(),
     );
 
-    let validation = validate(deposit, &claims);
+    let validation = validate(deposit, &claims, &verification());
 
     let Validation::Rejected(rejected) = validation else {
         panic!("parent traversal touched paths should be rejected");

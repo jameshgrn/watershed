@@ -1,5 +1,7 @@
 use std::path::PathBuf;
-use watershed_contracts::{ClaimKind, FileClaim, Policy, RecoveredIntent};
+use watershed_contracts::{
+    ClaimKind, FileClaim, Policy, RecoveredIntent, VerificationSpec, DEPOSIT_IDS_ARE_DERIVED,
+};
 use watershed_distributary::{collect, dispatch, mock_worker, Drafted, Plan, Validated};
 
 fn validated_plan() -> Plan<Validated> {
@@ -23,6 +25,9 @@ fn validated_plan() -> Plan<Validated> {
     Plan::<Drafted>::draft()
         .recover_intent(intent)
         .declare_claims(claims)
+        .declare_verification(VerificationSpec {
+            checks: vec![DEPOSIT_IDS_ARE_DERIVED.to_owned()],
+        })
         .compile()
         .expect("claims should compile")
         .validate(&policy)
@@ -56,8 +61,8 @@ fn completed_runs_derive_stable_deposit_ids() {
         "synthetic deposit",
         vec![PathBuf::from("b.rs"), PathBuf::from("./a.rs")],
     );
-    let (first_deposit, _first_claims) = collect(first);
-    let (second_deposit, _second_claims) = collect(second);
+    let (first_deposit, _first_claims, _first_verification) = collect(first);
+    let (second_deposit, _second_claims, _second_verification) = collect(second);
 
     assert_eq!(first_deposit.id(), second_deposit.id());
     assert_eq!(

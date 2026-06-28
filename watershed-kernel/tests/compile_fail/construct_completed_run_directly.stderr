@@ -6,4 +6,4 @@ error: cannot construct `Run<watershed_distributary::Completed>` with struct lit
   |         state: completed,
   |         ---------------- private field
   |
-  = note: ...and other private fields `id`, `intent`, `claims`, `retried_from`, `retry_index` and `max_retries` that were not provided
+  = note: ...and other private fields that were not provided

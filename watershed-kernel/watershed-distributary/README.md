@@ -53,13 +53,16 @@ Legal `Plan` transitions:
 - `Plan<Drafted>::draft() -> Plan<Drafted>`
 - `Plan<Drafted>::recover_intent(...) -> Plan<IntentRecovered>`
 - `Plan<IntentRecovered>::declare_claims(...) -> Plan<ClaimsDeclared>`
-- `Plan<ClaimsDeclared>::compile(...) -> Plan<Compiled>`
+- `Plan<ClaimsDeclared>::declare_verification(...) -> Plan<VerificationDeclared>`
+- `Plan<VerificationDeclared>::compile(...) -> Plan<Compiled>`
 - `Plan<Compiled>::validate(...) -> Plan<Validated>`
 
 Compilation canonicalizes valid file claims. Validation enforces the policy's
-claim requirements, shared-claim setting, retry budget capture, and
-`required_pressure_tests` registry names. It validates that required
-pressure-test names exist; it does not run tests.
+claim requirements, shared-claim setting, retry budget capture, verification
+spec shape, and `required_pressure_tests` registry names. It validates that
+verification checks and required pressure-test names exist and that every
+policy-required pressure test was declared by the plan's `VerificationSpec`;
+it does not run tests.
 
 Legal run motion:
 
@@ -69,11 +72,11 @@ Legal run motion:
 - `Run<Running>::fail(reason) -> Run<Failed>`
 - `Run<Failed>::retry() -> Result<Run<Pending>, RetryError>`
 - `mock_worker(Run<Running>) -> Run<Completed>` (test helper)
-- `collect(Run<Completed>) -> (Deposit, Vec<FileClaim>)`
+- `collect(Run<Completed>) -> (Deposit, Vec<FileClaim>, VerificationSpec)`
 
 `Deposit` has no public constructor. A deposit is created only by the consuming `Run<Running>::complete(...)` transition, stored inside `Run<Completed>`, and released by `collect(...)` with the dispatch-time `FileClaim`s for downstream claims-integrity validation. Its `deposit:` id is content-derived from the producing run id, summary, and canonical sorted touched files.
 
-The run carries `id`, `intent`, `claims`, `retried_from`, `retry_index`, and the validating policy's retry budget forward from dispatch through every state, so the completed-run deposit cites the run that produced it.
+The run carries `id`, `intent`, `claims`, `verification`, `retried_from`, `retry_index`, and the validating policy's retry budget forward from dispatch through every state, so the completed-run deposit cites the run that produced it and tributary validation receives the declared verification contract.
 
 Original dispatch creates a run with no retry parent and `retry_index == 0`.
 Retrying a failed run consumes `Run<Failed>`, checks the validating policy's `max_retries`, preserves the same intent and claims, sets `retried_from` to the failed parent run id, increments `retry_index`, and derives a fresh lineage-aware run id.

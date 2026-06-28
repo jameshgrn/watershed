@@ -6,7 +6,7 @@ This crate owns canonical data shared across the workspace.
 - `WorkClass`: discrete category for planned work.
 - `FileClaim`: path plus requested claim kind, with shared path coverage, write-authority, conflict semantics, and canonical authority form. Authority paths normalize to relative slash-separated paths and reject empty paths, absolute paths, parent traversal, and whitespace-only components.
 - `ClaimKind`: read-only, exclusive, or shared file authority.
-- `VerificationSpec`: declared checks for task success.
+- `VerificationSpec`: declared pressure-test checks for task success; plans must declare one before compile, and validation consumes it by name.
 - `RollbackSpec`: declared steps for reverting task work.
 - `Policy`: governance rules used to validate compiled plans, including required pressure-test registry names.
 - `PressureTest`: named rule and deterministic test path that enforces it, whether the rule is compile-fail or runtime-enforced.

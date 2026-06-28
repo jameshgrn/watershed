@@ -1,5 +1,6 @@
 use sha2::{Digest, Sha256};
-use watershed_contracts::FileClaim;
+use std::collections::BTreeSet;
+use watershed_contracts::{pressure_tests, FileClaim, VerificationSpec};
 use watershed_distributary::Deposit;
 
 /// Result of validating a collected deposit.
@@ -116,7 +117,33 @@ impl Baseline {
     }
 }
 
-pub fn validate(deposit: Deposit, claims: &[FileClaim]) -> Validation {
+pub fn validate(
+    deposit: Deposit,
+    claims: &[FileClaim],
+    verification: &VerificationSpec,
+) -> Validation {
+    if verification.checks.is_empty() {
+        return Validation::Rejected(RejectedValidation::new(
+            deposit,
+            "verification spec declares no checks".to_owned(),
+        ));
+    }
+
+    let registered = pressure_tests()
+        .into_iter()
+        .map(|test| test.name)
+        .collect::<BTreeSet<_>>();
+    if let Some(unknown_check) = verification
+        .checks
+        .iter()
+        .find(|check| !registered.contains(*check))
+    {
+        return Validation::Rejected(RejectedValidation::new(
+            deposit,
+            format!("verification spec names unknown check '{unknown_check}'"),
+        ));
+    }
+
     if deposit.summary().is_empty() {
         return Validation::Rejected(RejectedValidation::new(
             deposit,
