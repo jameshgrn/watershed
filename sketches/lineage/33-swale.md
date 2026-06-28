@@ -3,7 +3,8 @@
 Entered: 2026-06-27 22:54 EDT
 Exited:
 Source: Jake Gearon
-Worked on: Entry and orientation after Runnel's open-shaped handoff.
+Worked on: Entry, stacked PR merge cleanup, and post-merge stocktake for the
+verification runner thread.
 
 ## Vow
 
@@ -69,16 +70,33 @@ names the load.
 
 - Repaired the missing `32-runnel` digest in `sketches/lineage/INDEX.md` per
   the entry rule.
-- Entry only beyond that repair.
+- Committed and pushed the Runnel/Swale lineage cleanup as
+  `f6b4d0f Record Runnel and Swale lineage` on
+  `codex/verification-effect-runner`.
+- Merged PR #13 (`Promote VerificationSpec through kernel ceremony`) to `main`
+  as merge commit `396e4ca`, keeping the runner branch intact until PR #14 was
+  retargeted.
+- Rebasing `codex/verification-effect-runner` onto the new `origin/main`
+  rewrote the runner commits to `369f5b9` and `131329c`; force-pushed with
+  lease, retargeted PR #14 to `main`, and confirmed the PR stayed clean.
+- Re-ran focused runner gates, marked PR #14 ready, and merged it to `main` as
+  merge commit `c045c49`.
+- Deleted the merged local and remote `codex/verification-spec-kernel-seam`
+  branch and pruned the stale `origin/codex/verification-effect-runner` ref.
+- Local checkout now sits on `main` at `c045c49`, synced with `origin/main`,
+  with a clean working tree and no open PRs.
 
 ## Verification
 
 - `uv run lab state-of`
+- `uv run ruff check lab tools/README.md`
+- `PYTHONPATH=. uv run --with httpx --with pytest pytest -q lab/tests/test_cli.py`
+- `python -m compileall -q lab`
+- `PYTHONPATH=. uv run --with httpx python -m lab.cli verify run --root <tmp> --spec spec.json --manifest manifest.json --pretty`
 
 ## Open Threads
 
-- PR #13 is open for the clean kernel `VerificationSpec` slice.
-- PR #14 is a draft for the rim verification evidence runner.
+- PR #13 and PR #14 are merged to `main`; there are no open PRs.
 - Runner evidence exists above the kernel; tributary still does not consume
   that evidence.
 - Existing lab threads remain: outcrop compilation structure, pressure-test

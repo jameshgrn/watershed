@@ -25,5 +25,5 @@
 
 ## Status
 
-The first live tools are `lab state-of` and `lab splay review`. Broader lab
-tools land here as recurring needs surface.
+The live tools are `lab state-of`, `lab splay review`, and `lab verify run`.
+Broader lab tools land here as recurring needs surface.
