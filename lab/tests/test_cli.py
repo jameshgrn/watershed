@@ -1,5 +1,7 @@
 """CLI tests without model calls."""
 
+import json
+import sys
 from collections.abc import Sequence
 from io import StringIO
 from pathlib import Path
@@ -182,6 +184,139 @@ def test_state_of_reports_github_unavailable(tmp_path: Path, monkeypatch):
     assert "Sync: ahead 1, behind 2" in output
     assert "Working tree: dirty" in output
     assert "- unavailable: not authenticated" in output
+
+
+def test_verify_run_emits_passing_evidence(tmp_path: Path):
+    spec = tmp_path / "verification.json"
+    manifest = tmp_path / "manifest.json"
+    spec.write_text(json.dumps({"checks": ["smoke"]}), encoding="utf-8")
+    manifest.write_text(
+        json.dumps(
+            {
+                "checks": {
+                    "smoke": {
+                        "command": [
+                            sys.executable,
+                            "-c",
+                            "print('smoke passed')",
+                        ],
+                        "cwd": ".",
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    stdout = StringIO()
+    stderr = StringIO()
+
+    code = main(
+        [
+            "verify",
+            "run",
+            "--root",
+            str(tmp_path),
+            "--spec",
+            str(spec),
+            "--manifest",
+            str(manifest),
+        ],
+        stdout=stdout,
+        stderr=stderr,
+    )
+
+    assert code == 0
+    assert stderr.getvalue() == ""
+    evidence = json.loads(stdout.getvalue())
+    assert evidence["runner"] == "lab.verification"
+    assert evidence["verification_spec"] == {"checks": ["smoke"]}
+    assert evidence["verdict"] == "pass"
+    assert evidence["checks"][0]["status"] == "pass"
+    assert evidence["checks"][0]["stdout"] == "smoke passed\n"
+
+
+def test_verify_run_fails_missing_manifest_entry(tmp_path: Path):
+    spec = tmp_path / "verification.json"
+    manifest = tmp_path / "manifest.json"
+    spec.write_text(json.dumps({"checks": ["missing"]}), encoding="utf-8")
+    manifest.write_text(json.dumps({"checks": {}}), encoding="utf-8")
+    stdout = StringIO()
+    stderr = StringIO()
+
+    code = main(
+        [
+            "verify",
+            "run",
+            "--root",
+            str(tmp_path),
+            "--spec",
+            str(spec),
+            "--manifest",
+            str(manifest),
+        ],
+        stdout=stdout,
+        stderr=stderr,
+    )
+
+    assert code == 1
+    assert stderr.getvalue() == ""
+    evidence = json.loads(stdout.getvalue())
+    assert evidence["verdict"] == "fail"
+    assert evidence["checks"][0]["status"] == "fail"
+    assert "no command manifest entry" in evidence["checks"][0]["stderr"]
+
+
+def test_verify_run_writes_failing_evidence_file(tmp_path: Path):
+    spec = tmp_path / "verification.json"
+    manifest = tmp_path / "manifest.json"
+    output = tmp_path / "evidence" / "verification-evidence.json"
+    spec.write_text(json.dumps({"checks": ["fails"]}), encoding="utf-8")
+    manifest.write_text(
+        json.dumps(
+            {
+                "checks": {
+                    "fails": {
+                        "command": [
+                            sys.executable,
+                            "-c",
+                            "import sys; print('bad', file=sys.stderr); sys.exit(7)",
+                        ],
+                        "cwd": ".",
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    stdout = StringIO()
+    stderr = StringIO()
+
+    code = main(
+        [
+            "verify",
+            "run",
+            "--root",
+            str(tmp_path),
+            "--spec",
+            str(spec),
+            "--manifest",
+            str(manifest),
+            "--evidence",
+            str(output),
+            "--pretty",
+        ],
+        stdout=stdout,
+        stderr=stderr,
+    )
+
+    assert code == 1
+    assert stderr.getvalue() == ""
+    assert f"Evidence: {output}" in stdout.getvalue()
+    assert "Verdict: fail" in stdout.getvalue()
+    evidence = json.loads(output.read_text(encoding="utf-8"))
+    assert evidence["verdict"] == "fail"
+    assert evidence["checks"][0]["exit_code"] == 7
+    assert evidence["checks"][0]["stderr"] == "bad\n"
 
 
 def _write_state_fixture(root: Path) -> None:

@@ -9,6 +9,12 @@
 - `lab splay review --file <path> --angles "clarity,correctness"` — run a
   read-only splay review through the configured provider. Defaults to the local
   Gemma OpenAI-compatible server at `http://127.0.0.1:8080/v1`.
+- `lab verify run --spec verification.json --manifest manifest.json` — consume
+  a `VerificationSpec` JSON object, run the declared checks through an
+  above-kernel command manifest, and emit concrete verification evidence JSON.
+  The manifest maps each check name to an argv command list, optional working
+  directory, and optional timeout; command stdout/stderr, exit code, timing,
+  and pass/fail status are captured for later tributary inspection.
 
 ## Planned
 
